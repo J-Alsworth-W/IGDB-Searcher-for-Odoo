@@ -31,7 +31,7 @@
                     <button name="populate_themes" string="Populate Themes" type="object" display="always"/>
                 </header>
                 <field name="name"/>
-                <field name="slug"/>
+                <field name="slug" column_invisible="1"/>
                 <field name="igdb_id"/>
             </list>
         </field>

@@ -15,12 +15,13 @@
                     <group>
                         <field name="name"/>
                         <field name="igdb_id"/>
-                        <field name="game_cover" widget="image"/>
+                        <field name="game_cover" widget="image" invisible="1"/>
                         <field name="first_release_date"/>
                         <field name="url" widget="url"/>
-                        <field name="platform_ids" options="{'no_create': True}"/>
-                        <field name="genre_ids" options="{'no_create': True}"/>
-                        <field name="theme_ids" options="{'no_create': True}"/>
+                        <field name="platform_ids" options="{'no_create': True}" widget="many2many_tags"/>
+                        <field name="genre_ids" options="{'no_create': True}" widget="many2many_tags"/>
+                        <field name="theme_ids" options="{'no_create': True}" widget="many2many_tags"/>
+                        <separator/>
                         <field name="query_ids" options="{'no_create': True}">
                             <list>
                                 <field name="name"/>
