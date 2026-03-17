@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem
+        id="igdb_menu_root"
+        name="IGDB Search"
+        web_icon="crm,static/description/icon.png"
+        groups="base.group_user,base.group_system"
+        sequence="1"/><!--web_icon="crm,static/description/icon.png"-->
+    <menuitem
+        id="igdb_menu_queries"
+        name="Queries"
+        parent="igdb_menu_root"
+        action="action_igdb_queries"
+        sequence="1"/>
+    <menuitem
+        id="igdb_menu_games"
+        name="Games"
+        parent="igdb_menu_root"
+        action="action_igdb_games"
+        sequence="2"/>
+    <menuitem
+        id="igdb_menu_platforms"
+        name="Platforms"
+        parent="igdb_menu_root"
+        action="action_igdb_platforms"
+        sequence="4"/>
+    <menuitem
+        id="igdb_menu_genres"
+        name="Genres"
+        parent="igdb_menu_root"
+        action="action_igdb_genres"
+        sequence="5"/>
+    <menuitem
+        id="igdb_menu_themes"
+        name="Themes"
+        parent="igdb_menu_root"
+        action="action_igdb_themes"
+        sequence="6"/>
+    <menuitem
+        id="igdb_menu_config"
+        name="Configurations"
+        parent="igdb_menu_root"
+        action="action_igdb_configs"
+        sequence="100"/>
+</odoo>

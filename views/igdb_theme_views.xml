@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<odoo>
+    <record id="action_igdb_themes" model="ir.actions.act_window">
+        <field name="name">Themes</field>
+        <field name="path">themes</field>
+        <field name="res_model">igdb.theme</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="igdb_theme_view_form" model="ir.ui.view">
+        <field name="name">igdb.theme.form</field>
+        <field name="model">igdb.theme</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="slug"/>
+                        <field name="igdb_id"/>
+                        <field name="url" widget="url"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="igdb_theme_view_list" model="ir.ui.view">
+        <field name="name">igdb.theme.list</field>
+        <field name="model">igdb.theme</field>
+        <field name="arch" type="xml">
+            <list>
+                <header>
+                    <button name="populate_themes" string="Populate Themes" type="object" display="always"/>
+                </header>
+                <field name="name"/>
+                <field name="slug"/>
+                <field name="igdb_id"/>
+            </list>
+        </field>
+    </record>
+</odoo>

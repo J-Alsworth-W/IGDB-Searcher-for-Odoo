@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_igdb_config_system,igdb.config,model_igdb_config,base.group_system,1,1,1,1
+access_igdb_config,igdb.config,model_igdb_config,base.group_user,1,1,1,1
+access_igdb_query_system,igdb.query,model_igdb_query,base.group_system,1,1,1,1
+access_igdb_query,igdb.query,model_igdb_query,base.group_user,1,1,1,1
+access_igdb_platform_system,igdb.platform,model_igdb_platform,base.group_system,1,1,1,1
+access_igdb_platform,igdb.platform,model_igdb_platform,base.group_user,1,1,1,1
+access_igdb_game_system,igdb.game,model_igdb_game,base.group_system,1,1,1,1
+access_igdb_game,igdb.game,model_igdb_game,base.group_user,1,1,1,1
+access_igdb_genre_system,igdb.genre,model_igdb_genre,base.group_system,1,1,1,1
+access_igdb_genre,igdb.genre,model_igdb_genre,base.group_user,1,1,1,1
+access_igdb_theme_system,igdb.theme,model_igdb_theme,base.group_system,1,1,1,1
+access_igdb_theme,igdb.theme,model_igdb_theme,base.group_user,1,1,1,1

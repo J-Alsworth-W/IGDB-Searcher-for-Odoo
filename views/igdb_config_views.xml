@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<odoo>
+    <record id="action_igdb_configs" model="ir.actions.act_window">
+        <field name="name">Configurations</field>
+        <field name="path">configs</field>
+        <field name="res_model">igdb.config</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="igdb_config_view_form" model="ir.ui.view">
+        <field name="name">igdb.config.form</field>
+        <field name="model">igdb.config</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="test_connection" string="Test Connection" type="object"/>
+                </header>
+                <sheet>
+                    <!--<field name="name"/>-->
+                    <group>
+                        <field name="client_id_string"/>
+                        <field name="client_secret"/>
+                        <field name="auth_token_url"/>
+                        <field name="access_token"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="igdb_config_view_list" model="ir.ui.view">
+        <field name="name">igdb.config.list</field>
+        <field name="model">igdb.config</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="client_id_string"/>
+                <field name="client_secret"/>
+                <field name="auth_token_url"/>
+                <field name="access_token"/>
+            </list>
+        </field>
+    </record>
+</odoo>
