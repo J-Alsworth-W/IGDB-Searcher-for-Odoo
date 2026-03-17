@@ -14,8 +14,7 @@
                 <header>
                     <button name="test_connection" string="Test Connection" type="object"/>
                 </header>
-                <sheet>
-                    <!--<field name="name"/>-->
+                <sheet class="o_igdb_form_sheet_bg">
                     <group>
                         <field name="client_id_string"/>
                         <field name="client_secret"/>

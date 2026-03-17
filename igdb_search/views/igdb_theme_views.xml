@@ -11,7 +11,7 @@
         <field name="model">igdb.theme</field>
         <field name="arch" type="xml">
             <form>
-                <sheet>
+                <sheet class="o_igdb_form_sheet_bg">
                     <group>
                         <field name="name"/>
                         <field name="slug"/>
