@@ -18,6 +18,11 @@
     ],
     'installable': True,
     'application': True,
+    'assets': {
+        'web.assets_backend': [
+            'igdb_search/static/src/views/*',
+        ]
+    },
     'author': 'Jacob Alsworth',
     'license': 'GPL-3',
 }

@@ -14,7 +14,7 @@
                 <header>
                     <button name="do_search" string="Do Search" type="object"/>
                 </header>
-                <sheet>
+                <sheet class="o_igdb_form_sheet_bg">
                     <group>
                         <group string="Name and Query">
                             <field name="name"/>
