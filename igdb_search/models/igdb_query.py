@@ -32,9 +32,27 @@ class IgdbQuery(models.Model):
     release_date_end = fields.Date(string="Initial Release Date (End)")
     search_completed = fields.Boolean(string="Search Completed", default=False, copy=False)
     where_clause_used = fields.Boolean(compute='_compute_concatenated_query')
+    num_game_limit = fields.Integer(string="Max. Query Results Limit", default=4000,
+                                    help="The upper limit of results that will be returned by the query from IGDB. "
+                                         "This cannot exceed 4000 due to technical constraints on the API.")
     # Todo: Add developers and publishers as their own model types here, as well as player perspective.
 
-    @api.depends('included_platform_ids', 'excluded_platform_ids', 'game_name', 'release_date_start', 'release_date_end')
+    @api.constrains('release_date_start', 'release_date_end')
+    def _check_dates(self):
+        for query in self:
+            if query.release_date_end and query.release_date_start > query.release_date_end:
+                raise exceptions.ValidationError("The start date (%s) of the search must be earlier than the end date "
+                                                 "(%s)." % (query.release_date_start, query.release_date_end))
+
+    @api.constrains('num_game_limit')
+    def _check_num_game_limit(self):
+        for query in self:
+            if query.num_game_limit > 4000:
+                raise exceptions.ValidationError("The Max. Query Results Limit cannot exceed 4000.")
+
+    @api.depends('game_name', 'num_game_limit', 'included_platform_ids', 'excluded_platform_ids', 'included_genre_ids',
+                 'excluded_genre_ids', 'included_theme_ids', 'excluded_theme_ids', 'release_date_start',
+                 'release_date_end')
     def _compute_concatenated_query(self):
         for query in self:
             where_clause_used = False
@@ -96,16 +114,13 @@ class IgdbQuery(models.Model):
                     concat_query += " first_release_date < %s" % rde_datetime
                     where_clause_used = True
 
-            concat_query += " & id != (); limit 500;" if where_clause_used else " id != (); limit 500;"
+            if where_clause_used:
+                concat_query += "; limit 500;"
+            else:
+                concat_query += " limit 500;"
+
             query.concatenated_query = concat_query if concat_query != "fields *;" else ""
             query.where_clause_used = where_clause_used
-
-    @api.constrains('release_date_start', 'release_date_end')
-    def _check_dates(self):
-        for query in self:
-            if query.release_date_end and query.release_date_start > query.release_date_end:
-                raise exceptions.ValidationError("The start date (%s) of the search must be earlier than the end date "
-                                                 "(%s)."  % (query.release_date_start, query.release_date_end))
 
     def do_search(self):
         config = self.env['igdb.config'].get_config()
@@ -117,28 +132,43 @@ class IgdbQuery(models.Model):
 
             retrieved_igdb_ids = []
             retrieved_igdb_ids_str = ""
-            igdb_replacement_regex = r"& id != \(.*\)\w*" if query.where_clause_used else r"id != \(.*\)\w*"
+            igdb_replacement_regex = r"((where id.*)|(& id.*))*(; limit)"
+            limit_replacement_regex = r"limit \d*"
 
             created_games = self.env['igdb.game']
             matching_games = self.env['igdb.game']
+            games_to_search = 500
+
+            detailed_query = query.concatenated_query
 
             while not query_finished:
-                # If 2nd+ iteration
+                # Check if next search would take us over the configured query results limit and adjust query accordingly.
+                if len(retrieved_igdb_ids) + games_to_search >= query.num_game_limit:
+                    games_to_search = query.num_game_limit - len(retrieved_igdb_ids)
+                    detailed_query = re.sub(limit_replacement_regex, "limit %s" % games_to_search,
+                                            detailed_query)
+                elif len(retrieved_igdb_ids) >= query.num_game_limit:
+                    query_finished = True
+                    continue
+
+                # If 2nd+ iteration of while loop
                 if retrieved_igdb_ids_str:
                     where_clause_str = " &" if query.where_clause_used else " where"
                     game_reference = "id" if query.game_name else "id"
-                    new_ids_search_str = where_clause_str + " %s != (%s)" % (game_reference, retrieved_igdb_ids_str)
+
+                    new_ids_search_str = ";" if query.game_name else ""
+                    new_ids_search_str += where_clause_str + " %s != (%s); limit" % (game_reference, retrieved_igdb_ids_str)
 
                     detailed_query = re.sub(igdb_replacement_regex, new_ids_search_str,
-                                            query.concatenated_query)
+                                            detailed_query)
                 # If 1st iteration
                 else:
-                    if query.where_clause_used:
-                        detailed_query = re.sub(igdb_replacement_regex, retrieved_igdb_ids_str,
-                                                query.concatenated_query)
+                    if query.where_clause_used:  # Todo: check how this runs
+                        detailed_query = re.sub(igdb_replacement_regex, retrieved_igdb_ids_str + "; limit",
+                                                detailed_query)
                     else:
-                        detailed_query = re.sub(igdb_replacement_regex + ";", retrieved_igdb_ids_str,
-                                                query.concatenated_query)
+                        detailed_query = re.sub(igdb_replacement_regex + ";", retrieved_igdb_ids_str + "; limit",
+                                                detailed_query)
 
                 response = requests.post(games_url, headers={'Client-ID': config.client_id_string,
                                                        'Authorization': 'Bearer ' + config.access_token},
@@ -148,7 +178,9 @@ class IgdbQuery(models.Model):
 
                 # The 2nd clause here is to address a bug in the API where despite the detailed_query specifically
                 # excluding results with matching IDs, they will still be retrieved by the request anyway.
-                if len(response_json) == 0 or retrieved_igdb_ids and query.game_name and retrieved_igdb_ids == [str(game.get('id')) for game in response_json]:  # Todo: unsure if buggy if >500 results, may infinitely loop
+                if (len(response_json) == 0
+                        or retrieved_igdb_ids and query.game_name and retrieved_igdb_ids == [str(game.get('id')) for game in response_json]
+                        or len(retrieved_igdb_ids) >= query.num_game_limit):  # Todo: unsure if buggy if >500 results in 2nd case, may infinitely loop
                     query_finished = True
                     continue
                 for game in response_json:

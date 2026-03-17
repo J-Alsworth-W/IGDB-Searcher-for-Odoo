@@ -21,6 +21,7 @@
                             <field name="concatenated_query"/>
                             <field name="where_clause_used" invisible="1"/>
                             <field name="game_name"/>
+                            <field name="num_game_limit"/>
                         </group>
                         <group string="Release Date">
                             <field name="release_date_start"/>
@@ -52,6 +53,7 @@
                 <field name="name"/>
                 <field name="concatenated_query"/>
                 <field name="where_clause_used" column_invisible="1"/>
+                <field name="num_game_limit" column_invisible="1"/>
                 <field name="game_name"/>
                 <field name="release_date_start"/>
                 <field name="release_date_end"/>
