@@ -40,5 +40,11 @@ class IgdbTheme(models.Model):
                             'igdb_id': theme.get('id'),
                             'url': theme.get('url'),
                         })
-
-        # Todo: do CRUD
+                elif matching_theme and theme.get('id'):
+                    matching_theme.write(
+                        {
+                            'name': genre.get('name'),
+                            'slug': theme.get('slug'),
+                            'url': theme.get('url'),
+                        }
+                    )

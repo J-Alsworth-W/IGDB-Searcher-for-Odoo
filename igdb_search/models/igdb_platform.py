@@ -38,5 +38,10 @@ class IgdbPlatform(models.Model):
                             'igdb_id': platform.get('id'),
                             'url': platform.get('url'),
                         })
-
-        # Todo: do CRUD
+                elif matching_platform and platform.get('id'):
+                    matching_platform.write(
+                        {
+                            'name': platform.get('name'),
+                            'url': platform.get('url'),
+                        }
+                    )

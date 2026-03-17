@@ -40,5 +40,11 @@ class IgdbGenre(models.Model):
                             'igdb_id': genre.get('id'),
                             'url': genre.get('url'),
                         })
-
-        # Todo: do CRUD
+                elif matching_genre and genre.get('id'):
+                    matching_genre.write(
+                        {
+                            'name': genre.get('name'),
+                            'slug': genre.get('slug'),
+                            'url': genre.get('url'),
+                        }
+                    )
