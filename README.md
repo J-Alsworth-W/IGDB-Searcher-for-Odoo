@@ -22,9 +22,9 @@ Queries and their returned results are stored on the system, allowing the user t
 
 
 # Notes before getting started
-This project has been developed for my personal use as the developer in mind and as such has been developed for the Odoo platform with which I am familiar and can self-host in a development environment. 
+This project is still in development with my personal use in mind and as such has been developed for the Odoo platform with which I am familiar and can self-host. 
 
-With regards to usage of this module by other people: while you are able and welcome to download this module by downloading the igdb_search folder and placing where appropriate in your Odoo system and use it yourself for personal and non-commercial usage, you will be required to sign up with Twitch for a free account, enable their 2FA, and register an application in the Twitch Developer Portal, from where you can generate a Client Secret and Client ID which are required to enter into the IGDB Searcher Odoo module's configuration to be able to search IGDB.com's database. With regards to the steps involving Twitch, all of this is explained in the IGDB.com API documentation available at https://api-docs.igdb.com/#account-creation.
+With regards to usage of this module by other people: while you are able and welcome to download this module (by downloading the igdb_search folder and placing where appropriate in your Odoo system) and use it yourself for personal and non-commercial usage, you will be required to sign up with Twitch for a free account, enable their 2FA, and register an application in the Twitch Developer Portal, from where you can generate a Client Secret and Client ID which are required to enter into the IGDB Searcher Odoo module's configuration to be able to search IGDB.com's database. With regards to the steps involving Twitch, all of this is explained in the IGDB.com API documentation available at https://api-docs.igdb.com/#account-creation.
 
 # Gratitudes
 My thanks go to IGDB and Twitch for making the IGDB.com API free for non-commercial usage, and for making and maintaining the site more generally. The generous API terms allow personal projects like this one to exist, and the IGDB.com site as a whole has helped me win many rounds of video game music trivia with my friends!
