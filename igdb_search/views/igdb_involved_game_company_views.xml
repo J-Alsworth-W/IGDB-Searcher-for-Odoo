@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<odoo>
+    <record id="action_igdb_involved_game_companies" model="ir.actions.act_window">
+        <field name="name">Involved Game Companies</field>
+        <field name="path">involved-game-companies</field>
+        <field name="res_model">igdb.involved.game.company</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="igdb_involved_game_company_view_form" model="ir.ui.view">
+        <field name="name">igdb.involved.game.company.form</field>
+        <field name="model">igdb.involved.game.company</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet class="o_igdb_form_sheet_bg">
+                    <group>
+                        <field name="game_id"/>
+                        <field name="igdb_id"/>
+                        <field name="is_developer"/>
+                        <field name="is_publisher"/>
+                        <field name="is_porter"/>
+                        <field name="game_company_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="igdb_involved_game_company_view_list" model="ir.ui.view">
+        <field name="name">igdb.involved.game.company.list</field>
+        <field name="model">igdb.involved.game.company</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="game_id"/>
+                <field name="igdb_id"/>
+                <field name="is_developer"/>
+                <field name="is_publisher"/>
+                <field name="is_porter"/>
+                <field name="game_company_id"/>
+            </list>
+        </field>
+    </record>
+</odoo>

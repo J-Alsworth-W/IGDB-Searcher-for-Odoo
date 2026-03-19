@@ -43,7 +43,7 @@ class IgdbTheme(models.Model):
                 elif matching_theme and theme.get('id'):
                     matching_theme.write(
                         {
-                            'name': genre.get('name'),
+                            'name': theme.get('name'),
                             'slug': theme.get('slug'),
                             'url': theme.get('url'),
                         }

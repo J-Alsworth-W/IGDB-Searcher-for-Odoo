@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<odoo>
+    <record id="action_igdb_game_companies" model="ir.actions.act_window">
+        <field name="name">Game Companies</field>
+        <field name="path">game-companies</field>
+        <field name="res_model">igdb.game.company</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="igdb_game_company_view_form" model="ir.ui.view">
+        <field name="name">igdb.game.company.form</field>
+        <field name="model">igdb.game.company</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet class="o_igdb_form_sheet_bg">
+                    <group>
+                        <field name="name"/>
+                        <field name="slug"/>
+                        <field name="igdb_id"/>
+                        <field name="url" widget="url"/>
+                        <field name="parent_company_id"/>
+                        <field name="changed_game_company_id"/>
+                        <field name="country_id"/>
+                        <notebook>
+                            <page name="developed_games" string="Developed Games">
+                                <field name="developed_game_ids"/>
+                            </page>
+                            <page name="published_games" string="Published Games">
+                                <field name="published_game_ids"/>
+                            </page>
+                            <page name="ported_games" string="Ported Games">
+                                <field name="ported_game_ids"/>
+                            </page>
+                            <page name="involved_companies" string="Involved Companies">
+                                <field name="involved_game_company_ids"/>
+                            </page>
+                        </notebook>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="igdb_game_company_view_list" model="ir.ui.view">
+        <field name="name">igdb.game.company.list</field>
+        <field name="model">igdb.game.company</field>
+        <field name="arch" type="xml">
+            <list>
+                <header>
+                    <button name="populate_game_companies" string="Populate Game Companies" type="object" display="always"/>
+                </header>
+                <field name="name"/>
+                <field name="slug" column_invisible="1"/>
+                <field name="igdb_id"/>
+                <field name="parent_company_id"/>
+                <field name="changed_game_company_id"/>
+                <field name="country_id"/>
+            </list>
+        </field>
+    </record>
+</odoo>

@@ -1,7 +1,10 @@
 from odoo import api, exceptions, fields, models, modules, _
+from odoo.fields import Command
+from odoo.addons.igdb_search.const import COUNTRY_NUMERIC_CODES
 import requests
 import re
 from datetime import date, datetime
+from collections import defaultdict
 import base64
 from PIL import Image
 
@@ -26,6 +29,16 @@ class IgdbQuery(models.Model):
                                              relation="igdb_query_inc_themes_rel")
     excluded_theme_ids = fields.Many2many(string="Excluded Themes", comodel_name='igdb.theme',
                                              relation="igdb_query_exc_themes_rel")
+    included_developer_ids = fields.Many2many(string="Included Developers", comodel_name='igdb.game.company',
+                                              relation="igdb_query_inc_devs_rel")
+    excluded_developer_ids = fields.Many2many(string="Excluded Developers", comodel_name='igdb.game.company',
+                                              relation="igdb_query_exc_devs_rel")
+    included_publisher_ids = fields.Many2many(string="Included Publishers", comodel_name='igdb.game.company',
+                                              relation="igdb_query_inc_pubs_rel")
+    excluded_publisher_ids = fields.Many2many(string="Excluded Publishers", comodel_name='igdb.game.company',
+                                              relation="igdb_query_exc_pubs_rel")
+    # Todo: add porters or no? Are they useful to know or search?
+
     result_game_ids = fields.Many2many(string="Returned Games", comodel_name='igdb.game',
                                        relation="igdb_query_res_games_rel", copy=False)
     release_date_start = fields.Date(string="Initial Release Date (Start)")
@@ -35,7 +48,8 @@ class IgdbQuery(models.Model):
     num_game_limit = fields.Integer(string="Max. Query Results Limit", default=4000,
                                     help="The upper limit of results that will be returned by the query from IGDB. "
                                          "This cannot exceed 4000 due to technical constraints on the API.")
-    # Todo: Add developers and publishers as their own model types here, as well as player perspective.
+    # Todo: can raise limit if do_search() reworked to work like populate_game_companies() with searching by sorted ids.
+    # Todo: Add player perspective as its own model type here.
 
     @api.constrains('release_date_start', 'release_date_end')
     def _check_dates(self):
@@ -51,7 +65,8 @@ class IgdbQuery(models.Model):
                 raise exceptions.ValidationError("The Max. Query Results Limit cannot exceed 4000.")
 
     @api.depends('game_name', 'num_game_limit', 'included_platform_ids', 'excluded_platform_ids', 'included_genre_ids',
-                 'excluded_genre_ids', 'included_theme_ids', 'excluded_theme_ids', 'release_date_start',
+                 'excluded_genre_ids', 'included_theme_ids', 'excluded_theme_ids', 'included_developer_ids',
+                 'excluded_developer_ids', 'included_publisher_ids', 'excluded_publisher_ids','release_date_start',
                  'release_date_end')
     def _compute_concatenated_query(self):
         for query in self:
@@ -61,7 +76,10 @@ class IgdbQuery(models.Model):
             if query.game_name:
                 concat_query += ' search "%s";' % query.game_name
 
-            if query.included_platform_ids or query.excluded_platform_ids:
+            if any(query.included_platform_ids or query.excluded_platform_ids or query.included_genre_ids or
+                   query.excluded_genre_ids or query.included_theme_ids or query.excluded_theme_ids):
+                # or query.included_developer_ids or query.excluded_developer_ids or query.included_publisher_ids or query.excluded_publisher_ids):
+                # Todo: check for start and end date here too. Currently missing.
                 concat_query += " where"
 
                 if query.included_platform_ids:
@@ -101,6 +119,26 @@ class IgdbQuery(models.Model):
                     concat_query += " themes != (%s)" % (",".join(excluded_theme_ids))
                     where_clause_used = True
 
+                # Todo: implement searching for specific devs + publishers, not currently working.
+                # Below is commented out due to searching the API with "involved_companies.company" not being valid.
+                # Will have to be done by filtering the results post-retrieval.
+
+                # if query.included_developer_ids or query.included_publisher_ids:
+                #     if where_clause_used:
+                #         concat_query += " &"
+                #     included_company_ids = [str(igdb_id) for igdb_id in query.included_developer_ids.mapped('igdb_id')
+                #                             + query.included_publisher_ids.mapped('igdb_id')]
+                #     concat_query += " involved_companies.company = [%s]" % (",".join(included_company_ids))
+                #     where_clause_used = True
+                #
+                # if query.excluded_developer_ids or query.excluded_publisher_ids:
+                #     if where_clause_used:
+                #         concat_query += " &"
+                #     excluded_company_ids = [str(igdb_id) for igdb_id in query.excluded_developer_ids.mapped('igdb_id')
+                #                             + query.excluded_publisher_ids.mapped('igdb_id')]
+                #     concat_query += " involved_companies.company != (%s)" % (",".join(excluded_company_ids))
+                #     where_clause_used = True
+
                 if query.release_date_start:
                     if where_clause_used:
                         concat_query += " &"
@@ -128,7 +166,7 @@ class IgdbQuery(models.Model):
 
         for query in self:
             games_url = 'https://api.igdb.com/v4/games'
-            query_finished = False
+            games_query_finished = False
 
             retrieved_igdb_ids = []
             retrieved_igdb_ids_str = ""
@@ -137,18 +175,19 @@ class IgdbQuery(models.Model):
 
             created_games = self.env['igdb.game']
             matching_games = self.env['igdb.game']
+            game_igc_dict = {}
             games_to_search = 500
 
             detailed_query = query.concatenated_query
 
-            while not query_finished:
+            while not games_query_finished:
                 # Check if next search would take us over the configured query results limit and adjust query accordingly.
                 if len(retrieved_igdb_ids) + games_to_search >= query.num_game_limit:
                     games_to_search = query.num_game_limit - len(retrieved_igdb_ids)
                     detailed_query = re.sub(limit_replacement_regex, "limit %s" % games_to_search,
                                             detailed_query)
                 elif len(retrieved_igdb_ids) >= query.num_game_limit:
-                    query_finished = True
+                    games_query_finished = True
                     continue
 
                 # If 2nd+ iteration of while loop
@@ -163,7 +202,7 @@ class IgdbQuery(models.Model):
                                             detailed_query)
                 # If 1st iteration
                 else:
-                    if query.where_clause_used:  # Todo: check how this runs
+                    if query.where_clause_used:
                         detailed_query = re.sub(igdb_replacement_regex, retrieved_igdb_ids_str + "; limit",
                                                 detailed_query)
                     else:
@@ -181,11 +220,13 @@ class IgdbQuery(models.Model):
                 if (len(response_json) == 0
                         or retrieved_igdb_ids and query.game_name and retrieved_igdb_ids == [str(game.get('id')) for game in response_json]
                         or len(retrieved_igdb_ids) >= query.num_game_limit):  # Todo: unsure if buggy if >500 results in 2nd case, may infinitely loop
-                    query_finished = True
+                    games_query_finished = True
                     continue
+
                 for game in response_json:
                     matching_game = self.env['igdb.game'].search(
                         [('igdb_id', '=', game.get('id'))]) if game.get('id') else False
+                    involved_game_company_ids = game.get('involved_companies')
                     if not matching_game and game.get('id'):
                         new_game = self.env['igdb.game'].create(
                             {
@@ -198,6 +239,7 @@ class IgdbQuery(models.Model):
                                 'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
                             })
                         created_games += new_game
+                        game_igc_dict[new_game] = involved_game_company_ids
                     elif matching_game and game.get('id'):
                         matching_game.write(
                             {
@@ -209,6 +251,7 @@ class IgdbQuery(models.Model):
                                 'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
                             })
                         matching_games += matching_game
+                        game_igc_dict[matching_game] = involved_game_company_ids
 
                 # Todo: move below into a cron to run in the background or multithread somehow, too slow to run here
                 # covers_url = 'https://api.igdb.com/v4/covers'
@@ -236,6 +279,101 @@ class IgdbQuery(models.Model):
                 # for a single request).
                 retrieved_igdb_ids += [str(rj.get('id')) for rj in response_json]
                 retrieved_igdb_ids_str = ", ".join(retrieved_igdb_ids)
+
+                igc_url = 'https://api.igdb.com/v4/involved_companies'
+
+                most_recent_igc_igdb_id = 0
+                dict_game_igdb_ids = [str(dict_game.igdb_id) for dict_game in list(game_igc_dict.keys())]  # Get the igdb_ids for each key, i.e. all created and matched games so far this loop
+
+                igc_query_finished = False
+                igc_company_dict = {}
+                igc_company_dict_inv = defaultdict(list)
+                while not igc_query_finished:
+                    igc_detailed_query = 'fields *; where game = (%s) & id > %s; sort id asc; limit 500;' % (
+                    ",".join(dict_game_igdb_ids), most_recent_igc_igdb_id)
+                    igc_response = requests.post(igc_url, headers={'Client-ID': config.client_id_string,
+                                                                 'Authorization': 'Bearer ' + config.access_token},
+                                             data=igc_detailed_query)
+                    igc_response.raise_for_status()
+                    igc_response_json = igc_response.json()
+
+                    if len(igc_response_json) == 0:
+                        igc_query_finished = True
+                        continue
+
+                    new_or_modified_igcs = self.env['igdb.involved.game.company']
+                    for igc in igc_response_json:
+                        matching_igc = self.env['igdb.involved.game.company'].search(
+                            [('igdb_id', '=', igc.get('id'))]) if igc.get('id') else False
+                        igc_game = self.env['igdb.game'].search([('igdb_id', '=', igc.get('game'))], limit=1)
+                        company_id = igc.get('company')
+                        if not matching_igc and igc.get('id'):
+                            new_igc = self.env['igdb.involved.game.company'].create({
+                                'igdb_id': igc.get('id'),
+                                'is_developer': igc.get('developer'),
+                                'is_publisher': igc.get('publisher'),
+                                'is_porter': igc.get('porter'),
+                                'game_id': igc_game.id,
+                            })
+                            new_or_modified_igcs += new_igc
+                            igc_company_dict[new_igc] = company_id
+                            igc_company_dict_inv[company_id].append(new_igc)
+                        elif matching_igc and igc.get('id'):
+                            matching_igc.write({
+                                'is_developer': igc.get('developer'),
+                                'is_publisher': igc.get('publisher'),
+                                'is_porter': igc.get('porter'),
+                                'game_id': igc_game.id,
+                            })
+                            new_or_modified_igcs += matching_igc
+                            igc_company_dict[matching_igc] = company_id
+                            igc_company_dict_inv[company_id].append(matching_igc)
+                    most_recent_igc_igdb_id = new_or_modified_igcs[-1].igdb_id
+
+                company_url = 'https://api.igdb.com/v4/companies'
+
+                most_recent_company_igdb_id = 0
+                dict_igc_company_ids = [str(igc_company) for igc_company in set(igc_company_dict.values())]
+
+                company_query_finished = False
+                while not company_query_finished:
+                    company_detailed_query = 'fields *; where id = (%s) & id > %s; sort id asc; limit 500;' % (",".join(dict_igc_company_ids), most_recent_company_igdb_id)
+                    company_response = requests.post(company_url, headers={'Client-ID': config.client_id_string,
+                                                                   'Authorization': 'Bearer ' + config.access_token},
+                                                 data=company_detailed_query)
+                    company_response.raise_for_status()
+                    company_response_json = company_response.json()
+
+                    if len(company_response_json) == 0:
+                        company_query_finished = True
+                        continue
+
+                    new_or_modified_companies = self.env['igdb.game.company']
+                    for company in company_response_json:
+                        matching_company = self.env['igdb.game.company'].search(
+                            [('igdb_id', '=', company.get('id'))]) if company.get('id') else False
+                        country_code = COUNTRY_NUMERIC_CODES.get(str(company.get('country')), '')
+                        country_rec = self.env['res.country'].search([('code', '=', country_code)]) if country_code else self.env['res.country']
+                        if not matching_company and company.get('id'):
+                            new_company = self.env['igdb.game.company'].create({
+                                'igdb_id': company.get('id'),
+                                'url': company.get('url'),
+                                'name': company.get('name'),
+                                'slug': company.get('slug'),
+                                'country_id': country_rec.id,
+                                'involved_game_company_ids': [Command.link(igc_rec.id) for igc_rec in igc_company_dict_inv.get(company.get('id'))],
+                            })  # Todo: eventually sort out changed_game_company_id, parent_company_id, involved_game_company_ids here
+                            new_or_modified_companies += new_company
+                        elif matching_company and company.get('id'):
+                            matching_company.write({
+                                'url': company.get('url'),
+                                'name': company.get('name'),
+                                'slug': company.get('slug'),
+                                'country_id': country_rec.id,
+                                'involved_game_company_ids': [Command.link(igc_rec.id) for igc_rec in igc_company_dict_inv.get(company.get('id'))],
+                            })  # Todo: eventually sort out changed_game_company_id, parent_company_id, involved_game_company_ids here
+                            new_or_modified_companies += matching_company
+                    most_recent_company_igdb_id = new_or_modified_companies[-1].igdb_id
 
             query.result_game_ids = (created_games + matching_games).sorted(key=lambda mg: (mg['name'],
                                                                             mg['igdb_id']))

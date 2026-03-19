@@ -11,3 +11,7 @@ access_igdb_genre_system,igdb.genre,model_igdb_genre,base.group_system,1,1,1,1
 access_igdb_genre,igdb.genre,model_igdb_genre,base.group_user,1,1,1,1
 access_igdb_theme_system,igdb.theme,model_igdb_theme,base.group_system,1,1,1,1
 access_igdb_theme,igdb.theme,model_igdb_theme,base.group_user,1,1,1,1
+access_igdb_game_company_system,igdb.game.company,model_igdb_game_company,base.group_system,1,1,1,1
+access_igdb_game_company,igdb.game.company,model_igdb_game_company,base.group_user,1,1,1,1
+access_igdb_involved_game_company_system,igdb.involved.game.company,model_igdb_involved_game_company,base.group_system,1,1,1,1
+access_igdb_involved_game_company,igdb.involved.game.company,model_igdb_involved_game_company,base.group_user,1,1,1,1

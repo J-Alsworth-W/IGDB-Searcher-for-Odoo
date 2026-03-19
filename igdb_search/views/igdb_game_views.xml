@@ -31,6 +31,17 @@
                                 <field name="excluded_platform_ids" widget="many2many_tags"/>
                             </list>
                         </field>
+                        <notebook>
+                            <page name="developers" string="Developers">
+                                <field name="developer_ids"/>
+                            </page>
+                            <page name="publishers" string="Publishers">
+                                <field name="publisher_ids"/>
+                            </page>
+                            <page name="porters" string="Porters">
+                                <field name="porter_ids"/>
+                            </page>
+                        </notebook>
                     </group>
                 </sheet>
             </form>
