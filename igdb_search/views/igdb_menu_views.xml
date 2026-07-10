@@ -37,17 +37,23 @@
         action="action_igdb_themes"
         sequence="6"/>
     <menuitem
+        id="igdb_menu_franchises"
+        name="Franchises"
+        parent="igdb_menu_root"
+        action="action_igdb_franchises"
+        sequence="7"/>
+    <menuitem
         id="igdb_menu_game_companies"
         name="Game Companies"
         parent="igdb_menu_root"
         action="action_igdb_game_companies"
-        sequence="7"/>
+        sequence="8"/>
     <menuitem
         id="igdb_menu_involved_game_companies"
         name="Involved Game Companies"
         parent="igdb_menu_root"
         action="action_igdb_involved_game_companies"
-        sequence="8"/>
+        sequence="9"/>
     <menuitem
         id="igdb_menu_config"
         name="Configurations"

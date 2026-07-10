@@ -15,6 +15,7 @@
         'views/igdb_theme_views.xml',
         'views/igdb_game_company_views.xml',
         'views/igdb_involved_game_company_views.xml',
+        'views/igdb_franchise_views.xml',
         'views/igdb_config_views.xml',
         'views/igdb_menu_views.xml',
     ],

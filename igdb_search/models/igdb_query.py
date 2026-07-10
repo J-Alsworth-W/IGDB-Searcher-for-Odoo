@@ -37,7 +37,12 @@ class IgdbQuery(models.Model):
                                               relation="igdb_query_inc_pubs_rel")
     excluded_publisher_ids = fields.Many2many(string="Excluded Publishers", comodel_name='igdb.game.company',
                                               relation="igdb_query_exc_pubs_rel")
+    included_franchise_ids = fields.Many2many(string="Included Franchises", comodel_name='igdb.franchise',
+                                              relation="igdb_query_inc_franchises_rel")
+    excluded_franchise_ids = fields.Many2many(string="Excluded Franchises", comodel_name='igdb.franchise',
+                                              relation="igdb_query_exc_franchises_rel")
     # Todo: add porters or no? Are they useful to know or search?
+    # Todo: add bool fields to make platform/genre searches exclusive (i.e., just one platform/genre)
 
     result_game_ids = fields.Many2many(string="Returned Games", comodel_name='igdb.game',
                                        relation="igdb_query_res_games_rel", copy=False)
@@ -50,6 +55,7 @@ class IgdbQuery(models.Model):
                                          "This cannot exceed 4000 due to technical constraints on the API.")
     # Todo: can raise limit if do_search() reworked to work like populate_game_companies() with searching by sorted ids.
     # Todo: Add player perspective as its own model type here.
+    # Todo: Add toggle to avoid searching for companies to avoid unneeded compute time?
 
     @api.constrains('release_date_start', 'release_date_end')
     def _check_dates(self):
@@ -66,8 +72,8 @@ class IgdbQuery(models.Model):
 
     @api.depends('game_name', 'num_game_limit', 'included_platform_ids', 'excluded_platform_ids', 'included_genre_ids',
                  'excluded_genre_ids', 'included_theme_ids', 'excluded_theme_ids', 'included_developer_ids',
-                 'excluded_developer_ids', 'included_publisher_ids', 'excluded_publisher_ids','release_date_start',
-                 'release_date_end')
+                 'excluded_developer_ids', 'included_publisher_ids', 'excluded_publisher_ids', 'included_franchise_ids',
+                 'excluded_franchise_ids', 'release_date_start', 'release_date_end')
     def _compute_concatenated_query(self):
         for query in self:
             where_clause_used = False
@@ -77,7 +83,8 @@ class IgdbQuery(models.Model):
                 concat_query += ' search "%s";' % query.game_name
 
             if any(query.included_platform_ids or query.excluded_platform_ids or query.included_genre_ids or
-                   query.excluded_genre_ids or query.included_theme_ids or query.excluded_theme_ids):
+                   query.excluded_genre_ids or query.included_theme_ids or query.excluded_theme_ids or
+                   query.included_franchise_ids or query.excluded_franchise_ids):
                 # or query.included_developer_ids or query.excluded_developer_ids or query.included_publisher_ids or query.excluded_publisher_ids):
                 # Todo: check for start and end date here too. Currently missing.
                 concat_query += " where"
@@ -119,6 +126,19 @@ class IgdbQuery(models.Model):
                     concat_query += " themes != (%s)" % (",".join(excluded_theme_ids))
                     where_clause_used = True
 
+                if query.included_franchise_ids:
+                    if where_clause_used:
+                        concat_query += " &"
+                    included_franchise_ids = [str(igdb_id) for igdb_id in query.included_franchise_ids.mapped('igdb_id')]
+                    concat_query += " franchises = [%s]" % (",".join(included_franchise_ids))
+                    where_clause_used = True
+                if query.excluded_franchise_ids:
+                    if where_clause_used:
+                        concat_query += " &"
+                    excluded_franchise_ids = [str(igdb_id) for igdb_id in query.excluded_franchise_ids.mapped('igdb_id')]
+                    concat_query += " franchises != (%s)" % (",".join(excluded_franchise_ids))
+                    where_clause_used = True
+
                 # Todo: implement searching for specific devs + publishers, not currently working.
                 # Below is commented out due to searching the API with "involved_companies.company" not being valid.
                 # Will have to be done by filtering the results post-retrieval.
@@ -153,9 +173,9 @@ class IgdbQuery(models.Model):
                     where_clause_used = True
 
             if where_clause_used:
-                concat_query += "; limit 500;"
+                concat_query += "; sort id asc; limit 500;"
             else:
-                concat_query += " limit 500;"
+                concat_query += " sort id asc; limit 500;"
 
             query.concatenated_query = concat_query if concat_query != "fields *;" else ""
             query.where_clause_used = where_clause_used
@@ -170,13 +190,16 @@ class IgdbQuery(models.Model):
 
             retrieved_igdb_ids = []
             retrieved_igdb_ids_str = ""
-            igdb_replacement_regex = r"((where id.*)|(& id.*))*(; limit)"
+            igdb_replacement_regex = r"((where id.*)|(& id.*))*(; sort id asc; limit)"
             limit_replacement_regex = r"limit \d*"
 
             created_games = self.env['igdb.game']
             matching_games = self.env['igdb.game']
             game_igc_dict = {}
             games_to_search = 500
+
+            most_recent_game_id = 0
+            new_and_matched_games = self.env['igdb.game']
 
             detailed_query = query.concatenated_query
 
@@ -196,17 +219,17 @@ class IgdbQuery(models.Model):
                     game_reference = "id" if query.game_name else "id"
 
                     new_ids_search_str = ";" if query.game_name else ""
-                    new_ids_search_str += where_clause_str + " %s != (%s); limit" % (game_reference, retrieved_igdb_ids_str)
+                    new_ids_search_str += where_clause_str + " %s > %s; sort id asc; limit" % (game_reference, most_recent_game_id)
 
                     detailed_query = re.sub(igdb_replacement_regex, new_ids_search_str,
                                             detailed_query)
                 # If 1st iteration
                 else:
                     if query.where_clause_used:
-                        detailed_query = re.sub(igdb_replacement_regex, retrieved_igdb_ids_str + "; limit",
+                        detailed_query = re.sub(igdb_replacement_regex, retrieved_igdb_ids_str + "; sort id asc; limit",
                                                 detailed_query)
                     else:
-                        detailed_query = re.sub(igdb_replacement_regex + ";", retrieved_igdb_ids_str + "; limit",
+                        detailed_query = re.sub(igdb_replacement_regex + ";", retrieved_igdb_ids_str + "; sort id asc; limit",
                                                 detailed_query)
 
                 response = requests.post(games_url, headers={'Client-ID': config.client_id_string,
@@ -237,8 +260,10 @@ class IgdbQuery(models.Model):
                                 'platform_ids': self.env['igdb.platform'].search([('igdb_id', '=', game.get('platforms'))]).ids,
                                 'genre_ids': self.env['igdb.genre'].search([('igdb_id', '=', game.get('genres'))]).ids,
                                 'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
+                                'franchise_ids': self.env['igdb.franchise'].search([('igdb_id', '=', game.get('franchises'))]).ids,
                             })
                         created_games += new_game
+                        new_and_matched_games += new_game
                         game_igc_dict[new_game] = involved_game_company_ids
                     elif matching_game and game.get('id'):
                         matching_game.write(
@@ -249,9 +274,13 @@ class IgdbQuery(models.Model):
                                 'platform_ids': self.env['igdb.platform'].search([('igdb_id', '=', game.get('platforms'))]).ids,
                                 'genre_ids': self.env['igdb.genre'].search([('igdb_id', '=', game.get('genres'))]).ids,
                                 'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
+                                'franchise_ids': self.env['igdb.franchise'].search([('igdb_id', '=', game.get('franchises'))]).ids,
                             })
                         matching_games += matching_game
+                        new_and_matched_games += matching_game
                         game_igc_dict[matching_game] = involved_game_company_ids
+
+                most_recent_game_id = new_and_matched_games[-1].igdb_id
 
                 # Todo: move below into a cron to run in the background or multithread somehow, too slow to run here
                 # covers_url = 'https://api.igdb.com/v4/covers'

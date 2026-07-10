@@ -21,6 +21,7 @@
                         <field name="platform_ids" options="{'no_create': True}" widget="many2many_tags"/>
                         <field name="genre_ids" options="{'no_create': True}" widget="many2many_tags"/>
                         <field name="theme_ids" options="{'no_create': True}" widget="many2many_tags"/>
+                        <field name="franchise_ids" options="{'no_create': True}" widget="many2many_tags"/>
                         <separator/>
                         <field name="query_ids" options="{'no_create': True}">
                             <list>
@@ -53,11 +54,14 @@
         <field name="arch" type="xml">
             <list>
                 <field name="name"/>
-                <field name="igdb_id"/>
+                <field name="igdb_id" optional="hide"/>
                 <field name="first_release_date"/>
                 <field name="platform_ids" widget="many2many_tags"/>
                 <field name="genre_ids" widget="many2many_tags"/>
                 <field name="theme_ids" widget="many2many_tags"/>
+                <field name="developer_ids" widget="many2many_tags" optional="show"/>
+                <field name="publisher_ids" widget="many2many_tags" optional="show"/>
+                <field name="franchise_ids" widget="many2many_tags"/>
             </list>
         </field>
     </record>

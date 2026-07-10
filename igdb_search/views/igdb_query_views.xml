@@ -38,6 +38,8 @@
                             <field name="excluded_developer_ids" widget="many2many_tags" options="{'no_create': True}"/>
                             <field name="included_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
                             <field name="excluded_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                            <field name="included_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                            <field name="excluded_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
                         </group>
                         <group>
 
@@ -71,6 +73,8 @@
                 <field name="excluded_developer_ids" widget="many2many_tags"/>
                 <field name="included_publisher_ids" widget="many2many_tags"/>
                 <field name="excluded_publisher_ids" widget="many2many_tags"/>
+                <field name="included_franchise_ids" widget="many2many_tags"/>
+                <field name="excluded_franchise_ids" widget="many2many_tags"/>
             </list>
         </field>
     </record>

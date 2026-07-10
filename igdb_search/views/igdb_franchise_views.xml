@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<odoo>
+    <record id="action_igdb_franchises" model="ir.actions.act_window">
+        <field name="name">Franchises</field>
+        <field name="path">franchises</field>
+        <field name="res_model">igdb.franchise</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="igdb_franchise_view_form" model="ir.ui.view">
+        <field name="name">igdb.franchise.form</field>
+        <field name="model">igdb.franchise</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet class="o_igdb_form_sheet_bg">
+                    <group>
+                        <field name="name"/>
+                        <field name="igdb_id"/>
+                        <field name="game_ids"/>
+                        <field name="slug"/>
+                        <field name="url"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="igdb_franchise_view_list" model="ir.ui.view">
+        <field name="name">igdb.franchise.list</field>
+        <field name="model">igdb.franchise</field>
+        <field name="arch" type="xml">
+            <list>
+                <header>
+                    <button name="populate_franchises" string="Populate Franchises" type="object" display="always"/>
+                </header>
+                <field name="name"/>
+                <field name="igdb_id"/>
+            </list>
+        </field>
+    </record>
+</odoo>

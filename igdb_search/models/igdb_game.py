@@ -23,6 +23,7 @@ class IgdbGame(models.Model):
                                      compute='_compute_developer_publisher_ids', compute_sudo=True)
     porter_ids = fields.Many2many(string="Porter(s)", comodel_name='igdb.game.company',
                                   compute='_compute_developer_publisher_ids', compute_sudo=True)
+    franchise_ids = fields.Many2many(string="Franchise(s)", comodel_name='igdb.franchise', relation="igdb_games_franchises_rel")
 
     _check_game_igdb_id_unique = models.Constraint(
         'unique (igdb_id)',
