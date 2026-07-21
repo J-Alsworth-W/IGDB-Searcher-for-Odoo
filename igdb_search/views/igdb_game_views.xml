@@ -4,18 +4,21 @@
         <field name="name">Games</field>
         <field name="path">games</field>
         <field name="res_model">igdb.game</field>
-        <field name="view_mode">list,form</field>
+        <field name="view_mode">list,form,kanban</field>
     </record>
     <record id="igdb_game_view_form" model="ir.ui.view">
         <field name="name">igdb.game.form</field>
         <field name="model">igdb.game</field>
         <field name="arch" type="xml">
             <form edit="0">
+                <header>
+                    <button name="get_cover" string="Get Cover" type="object" display="always"/>
+                </header>
                 <sheet class="o_igdb_form_sheet_bg">
                     <group>
                         <field name="name"/>
                         <field name="igdb_id"/>
-                        <field name="game_cover" widget="image" invisible="1"/>
+                        <field name="game_cover" widget="image" invisible="0"/>
                         <field name="first_release_date"/>
                         <field name="url" widget="url"/>
                         <field name="platform_ids" options="{'no_create': True}" widget="many2many_tags"/>
@@ -53,6 +56,9 @@
         <field name="model">igdb.game</field>
         <field name="arch" type="xml">
             <list>
+                <header>
+                    <button name="get_cover" string="Get Covers" type="object" display="always"/>
+                </header>
                 <field name="name"/>
                 <field name="igdb_id" optional="hide"/>
                 <field name="first_release_date"/>
@@ -63,6 +69,26 @@
                 <field name="publisher_ids" widget="many2many_tags" optional="show"/>
                 <field name="franchise_ids" widget="many2many_tags"/>
             </list>
+        </field>
+    </record>
+    <record id="igdb_game_view_kanban" model="ir.ui.view">
+        <field name="name">igdb.game.kanban</field>
+        <field name="model">igdb.game</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <templates>
+                    <t t-name="card" class="flex-row">
+                        <aside class="o_kanban_aside_full">
+                            <field name="game_cover" widget="image" class="d-block position-relative"/>
+                        </aside>
+                        <main class="ms-2">
+                            <field name="name"/>
+                            <field name="platform_ids" widget="many2many_tags"/>
+                            <field name="developer_ids" widget="many2many_tags"/>
+                        </main>
+                    </t>
+                </templates>
+            </kanban>
         </field>
     </record>
 </odoo>

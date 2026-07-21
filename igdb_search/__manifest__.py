@@ -18,6 +18,7 @@
         'views/igdb_franchise_views.xml',
         'views/igdb_config_views.xml',
         'views/igdb_menu_views.xml',
+        'data/ir_cron.xml',
     ],
     'installable': True,
     'application': True,

@@ -17,15 +17,15 @@ class IgdbQuery(models.Model):
     name = fields.Char()
     concatenated_query = fields.Char(compute='_compute_concatenated_query')
     game_name = fields.Char(string="Game Name")
-    included_platform_ids = fields.Many2many(string="Platforms", comodel_name='igdb.platform',
+    included_platform_ids = fields.Many2many(string="Included Platforms", comodel_name='igdb.platform',
                                              relation="igdb_query_inc_platforms_rel")
     excluded_platform_ids = fields.Many2many(string="Excluded Platforms", comodel_name='igdb.platform',
                                              relation="igdb_query_exc_platforms_rel")
-    included_genre_ids = fields.Many2many(string="Genres", comodel_name='igdb.genre',
+    included_genre_ids = fields.Many2many(string="Included Genres", comodel_name='igdb.genre',
                                              relation="igdb_query_inc_genres_rel")
     excluded_genre_ids = fields.Many2many(string="Excluded Genres", comodel_name='igdb.genre',
                                              relation="igdb_query_exc_genres_rel")
-    included_theme_ids = fields.Many2many(string="Themes", comodel_name='igdb.theme',
+    included_theme_ids = fields.Many2many(string="Included Themes", comodel_name='igdb.theme',
                                              relation="igdb_query_inc_themes_rel")
     excluded_theme_ids = fields.Many2many(string="Excluded Themes", comodel_name='igdb.theme',
                                              relation="igdb_query_exc_themes_rel")
@@ -281,28 +281,6 @@ class IgdbQuery(models.Model):
                         game_igc_dict[matching_game] = involved_game_company_ids
 
                 most_recent_game_id = new_and_matched_games[-1].igdb_id
-
-                # Todo: move below into a cron to run in the background or multithread somehow, too slow to run here
-                # covers_url = 'https://api.igdb.com/v4/covers'
-                # covers_list = ", ".join([str(game.get('id')) for game in response_json if game.get('cover') is not None])
-                # covers_query = "fields *; where game = (%s); limit 500;" % covers_list
-                # covers_response = requests.post(covers_url, headers={'Client-ID': config.client_id_string,
-                #                                    'Authorization': 'Bearer ' + config.access_token},
-                #                                 data=covers_query)
-                # covers_response.raise_for_status()
-                # covers_response_json = covers_response.json()
-                #
-                # for cover in covers_response_json:
-                #     game = self.env['igdb.game'].search([('igdb_id', '=', cover.get('game'))])
-                #     cover_url = "https://images.igdb.com/igdb/image/upload/t_cover_big/%s.jpeg" % cover.get('image_id')
-                #     cover_image_response = requests.get(cover_url)
-                #     cover_image_response.raise_for_status()
-                #
-                #     cover_image_response_content = cover_image_response.content
-                #     encoded_cover_image_response_content = base64.b64encode(cover_image_response_content)
-                #     game.game_cover = encoded_cover_image_response_content
-                #
-                #     print("Encoding image %s of %s" % (covers_response_json.index(cover), len(covers_response_json)))
 
                 # Calculate already-retrieved records from the API, to enable retrieving >500 records at once (the limit
                 # for a single request).

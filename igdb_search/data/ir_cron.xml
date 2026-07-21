@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="game_images_cron" model="ir.cron">
+            <field name="name">IGDB Games: Download Images</field>
+            <field name="model_id" ref="igdb_search.model_igdb_game"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_get_game_covers()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+        </record>
+    </data>
+</odoo>

@@ -28,23 +28,61 @@
                             <field name="release_date_end"/>
                         </group>
                         <group string="Inclusive and Exclusive Filters">
-                            <field name="included_platform_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="excluded_platform_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="included_genre_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="excluded_genre_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="included_theme_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="excluded_theme_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="included_developer_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="excluded_developer_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="included_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="excluded_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="included_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                            <field name="excluded_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                            <group>
+                                <field name="included_platform_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="included_genre_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="included_theme_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="included_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="included_developer_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="included_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                            </group>
+                            <group>
+                                <field name="excluded_platform_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="excluded_genre_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="excluded_theme_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="excluded_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="excluded_developer_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="excluded_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                            </group>
                         </group>
                         <group>
 
                         </group>
-                        <field name="result_game_ids" readonly="1" options="{'no_create': True}"/>
+                        <notebook>
+                            <page name="results_list" string="Search Results (list)">
+                                <field name="result_game_ids" readonly="1" options="{'no_create': True}">
+                                    <list>
+                                        <field name="name"/>
+                                        <field name="igdb_id" optional="hide"/>
+                                        <field name="first_release_date"/>
+                                        <field name="platform_ids" widget="many2many_tags"/>
+                                        <field name="genre_ids" widget="many2many_tags"/>
+                                        <field name="theme_ids" widget="many2many_tags"/>
+                                        <field name="developer_ids" widget="many2many_tags" optional="show"/>
+                                        <field name="publisher_ids" widget="many2many_tags" optional="show"/>
+                                        <field name="franchise_ids" widget="many2many_tags"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page name="results_kanban" string="Search Results (kanban)">
+                                <field name="result_game_ids" readonly="1" options="{'no_create': True}">
+                                    <kanban>
+                                        <templates>
+                                            <t t-name="card" class="flex-row">
+                                                <aside class="o_kanban_aside_full">
+                                                    <field name="game_cover" widget="image" class="d-block position-relative"/>
+                                                </aside>
+                                                <main class="ms-2">
+                                                    <field name="name"/>
+                                                    <field name="platform_ids" widget="many2many_tags"/>
+                                                    <field name="developer_ids" widget="many2many_tags"/>
+                                                </main>
+                                            </t>
+                                        </templates>
+                                    </kanban>
+                                </field>
+                            </page>
+                        </notebook>
                         <field name="search_completed"/>
                     </group>
                 </sheet>
