@@ -193,206 +193,233 @@ class IgdbQuery(models.Model):
         config.test_connection()
 
         for query in self:
-            games_url = 'https://api.igdb.com/v4/games'
-            games_query_finished = False
+            query.get_games(config)
 
-            retrieved_igdb_ids = []
-            retrieved_igdb_ids_str = ""
-            igdb_replacement_regex = r"((where id.*)|(& id.*))*(; sort id asc; limit)"
-            limit_replacement_regex = r"limit \d*"
+        return
 
-            created_games = self.env['igdb.game']
-            matching_games = self.env['igdb.game']
-            game_igc_dict = {}
-            games_to_search = 500
+    def get_games(self, config):
+        games_url = 'https://api.igdb.com/v4/games'
+        games_query_finished = False
 
-            most_recent_game_id = 0
-            new_and_matched_games = self.env['igdb.game']
+        retrieved_igdb_ids = []
+        retrieved_igdb_ids_str = ""
+        igdb_replacement_regex = r"((where id.*)|(& id.*))*(; sort id asc; limit)"
+        limit_replacement_regex = r"limit \d*"
 
-            detailed_query = query.concatenated_query
+        created_games = self.env['igdb.game']
+        matching_games = self.env['igdb.game']
+        game_igc_dict = {}
+        games_to_search = 500
 
-            while not games_query_finished:
-                # Check if next search would take us over the configured query results limit and adjust query accordingly.
-                if len(retrieved_igdb_ids) + games_to_search >= query.num_game_limit:
-                    games_to_search = query.num_game_limit - len(retrieved_igdb_ids)
-                    detailed_query = re.sub(limit_replacement_regex, "limit %s" % games_to_search,
+        most_recent_game_id = 0
+        new_and_matched_games = self.env['igdb.game']
+
+        detailed_query = self.concatenated_query
+
+        while not games_query_finished:
+            # Check if next search would take us over the configured query results limit and adjust query accordingly.
+            if len(retrieved_igdb_ids) + games_to_search >= self.num_game_limit:
+                games_to_search = self.num_game_limit - len(retrieved_igdb_ids)
+                detailed_query = re.sub(limit_replacement_regex, "limit %s" % games_to_search,
+                                        detailed_query)
+            elif len(retrieved_igdb_ids) >= self.num_game_limit:
+                games_query_finished = True
+                continue
+
+            # If 2nd+ iteration of while loop
+            if retrieved_igdb_ids_str:
+                where_clause_str = " &" if self.where_clause_used else " where"
+
+                new_ids_search_str = where_clause_str + " id > %s; sort id asc; limit" % most_recent_game_id
+
+                detailed_query = re.sub(igdb_replacement_regex, new_ids_search_str,
+                                        detailed_query)
+            # If 1st iteration
+            else:
+                if self.where_clause_used:
+                    detailed_query = re.sub(igdb_replacement_regex, retrieved_igdb_ids_str + "; sort id asc; limit",
                                             detailed_query)
-                elif len(retrieved_igdb_ids) >= query.num_game_limit:
-                    games_query_finished = True
-                    continue
-
-                # If 2nd+ iteration of while loop
-                if retrieved_igdb_ids_str:
-                    where_clause_str = " &" if query.where_clause_used else " where"
-
-                    new_ids_search_str = where_clause_str + " id > %s; sort id asc; limit" % most_recent_game_id
-
-                    detailed_query = re.sub(igdb_replacement_regex, new_ids_search_str,
-                                            detailed_query)
-                # If 1st iteration
                 else:
-                    if query.where_clause_used:
-                        detailed_query = re.sub(igdb_replacement_regex, retrieved_igdb_ids_str + "; sort id asc; limit",
-                                                detailed_query)
-                    else:
-                        detailed_query = re.sub(igdb_replacement_regex + ";", retrieved_igdb_ids_str + "; sort id asc; limit",
-                                                detailed_query)
+                    detailed_query = re.sub(igdb_replacement_regex + ";",
+                                            retrieved_igdb_ids_str + "; sort id asc; limit",
+                                            detailed_query)
 
-                response = requests.post(games_url, headers={'Client-ID': config.client_id_string,
-                                                       'Authorization': 'Bearer ' + config.access_token},
-                                         data=detailed_query)
-                response.raise_for_status()
-                response_json = response.json()
+            response = requests.post(games_url, headers={'Client-ID': config.client_id_string,
+                                                         'Authorization': 'Bearer ' + config.access_token},
+                                     data=detailed_query)
+            response.raise_for_status()
+            response_json = response.json()
 
-                # The 2nd clause here is to address a bug in the API where despite the detailed_query specifically
-                # excluding results with matching IDs, they will still be retrieved by the request anyway.
-                if (len(response_json) == 0
-                        or retrieved_igdb_ids and query.game_name and retrieved_igdb_ids == [str(game.get('id')) for game in response_json]
-                        or len(retrieved_igdb_ids) >= query.num_game_limit):  # Todo: unsure if buggy if >500 results in 2nd case, may infinitely loop
-                    games_query_finished = True
-                    continue
+            # The 2nd clause here is to address a bug in the API where despite the detailed_query specifically
+            # excluding results with matching IDs, they will still be retrieved by the request anyway.
+            if (len(response_json) == 0
+                    or retrieved_igdb_ids and self.game_name and retrieved_igdb_ids == [str(game.get('id')) for game in
+                                                                                         response_json]
+                    or len(
+                        retrieved_igdb_ids) >= self.num_game_limit):  # Todo: unsure if buggy if >500 results in 2nd case, may infinitely loop
+                games_query_finished = True
+                continue
 
-                for game in response_json:
-                    matching_game = self.env['igdb.game'].search(
-                        [('igdb_id', '=', game.get('id'))]) if game.get('id') else False
-                    involved_game_company_ids = game.get('involved_companies')
-                    if not matching_game and game.get('id'):
-                        new_game = self.env['igdb.game'].create(
-                            {
-                                'name': game.get('name'),
-                                'igdb_id': game.get('id'),
-                                'url': game.get('url'),
-                                'first_release_date': datetime.fromtimestamp(game.get('first_release_date'), tz=None) if game.get('first_release_date') else False,
-                                'platform_ids': self.env['igdb.platform'].search([('igdb_id', '=', game.get('platforms'))]).ids,
-                                'genre_ids': self.env['igdb.genre'].search([('igdb_id', '=', game.get('genres'))]).ids,
-                                'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
-                                'franchise_ids': self.env['igdb.franchise'].search([('igdb_id', '=', game.get('franchises'))]).ids,
-                            })
-                        created_games += new_game
-                        new_and_matched_games += new_game
-                        game_igc_dict[new_game] = involved_game_company_ids
-                    elif matching_game and game.get('id'):
-                        matching_game.write(
-                            {
-                                'name': game.get('name'),
-                                'url': game.get('url'),
-                                'first_release_date': datetime.fromtimestamp(game.get('first_release_date'), tz=None) if game.get('first_release_date') else False,
-                                'platform_ids': self.env['igdb.platform'].search([('igdb_id', '=', game.get('platforms'))]).ids,
-                                'genre_ids': self.env['igdb.genre'].search([('igdb_id', '=', game.get('genres'))]).ids,
-                                'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
-                                'franchise_ids': self.env['igdb.franchise'].search([('igdb_id', '=', game.get('franchises'))]).ids,
-                            })
-                        matching_games += matching_game
-                        new_and_matched_games += matching_game
-                        game_igc_dict[matching_game] = involved_game_company_ids
+            for game in response_json:
+                matching_game = self.env['igdb.game'].search(
+                    [('igdb_id', '=', game.get('id'))]) if game.get('id') else False
+                involved_game_company_ids = game.get('involved_companies')
+                if not matching_game and game.get('id'):
+                    new_game = self.env['igdb.game'].create(
+                        {
+                            'name': game.get('name'),
+                            'igdb_id': game.get('id'),
+                            'url': game.get('url'),
+                            'first_release_date': datetime.fromtimestamp(game.get('first_release_date'),
+                                                                         tz=None) if game.get(
+                                'first_release_date') else False,
+                            'platform_ids': self.env['igdb.platform'].search(
+                                [('igdb_id', '=', game.get('platforms'))]).ids,
+                            'genre_ids': self.env['igdb.genre'].search([('igdb_id', '=', game.get('genres'))]).ids,
+                            'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
+                            'franchise_ids': self.env['igdb.franchise'].search(
+                                [('igdb_id', '=', game.get('franchises'))]).ids,
+                        })
+                    created_games += new_game
+                    new_and_matched_games += new_game
+                    game_igc_dict[new_game] = involved_game_company_ids
+                elif matching_game and game.get('id'):
+                    matching_game.write(
+                        {
+                            'name': game.get('name'),
+                            'url': game.get('url'),
+                            'first_release_date': datetime.fromtimestamp(game.get('first_release_date'),
+                                                                         tz=None) if game.get(
+                                'first_release_date') else False,
+                            'platform_ids': self.env['igdb.platform'].search(
+                                [('igdb_id', '=', game.get('platforms'))]).ids,
+                            'genre_ids': self.env['igdb.genre'].search([('igdb_id', '=', game.get('genres'))]).ids,
+                            'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
+                            'franchise_ids': self.env['igdb.franchise'].search(
+                                [('igdb_id', '=', game.get('franchises'))]).ids,
+                        })
+                    matching_games += matching_game
+                    new_and_matched_games += matching_game
+                    game_igc_dict[matching_game] = involved_game_company_ids
 
-                most_recent_game_id = new_and_matched_games[-1].igdb_id
+            most_recent_game_id = new_and_matched_games[-1].igdb_id
 
-                # Calculate already-retrieved records from the API, to enable retrieving >500 records at once (the limit
-                # for a single request).
-                retrieved_igdb_ids += [str(rj.get('id')) for rj in response_json]
-                retrieved_igdb_ids_str = ", ".join(retrieved_igdb_ids)
+            # Calculate already-retrieved records from the API, to enable retrieving >500 records at once (the limit
+            # for a single request).
+            retrieved_igdb_ids += [str(rj.get('id')) for rj in response_json]
+            retrieved_igdb_ids_str = ", ".join(retrieved_igdb_ids)
 
-                igc_url = 'https://api.igdb.com/v4/involved_companies'
+            self.get_involved_game_companies(config, game_igc_dict)
 
-                most_recent_igc_igdb_id = 0
-                dict_game_igdb_ids = [str(dict_game.igdb_id) for dict_game in list(game_igc_dict.keys())]  # Get the igdb_ids for each key, i.e. all created and matched games so far this loop
+        self.result_game_ids = (created_games + matching_games).sorted(key=lambda mg: (mg['name'],
+                                                                                        mg['igdb_id']))
+        self.search_completed = True
+        print("Query %s done!" % self.name)
+        return
 
-                igc_query_finished = False
-                igc_company_dict = {}
-                igc_company_dict_inv = defaultdict(list)
-                while not igc_query_finished:
-                    igc_detailed_query = 'fields *; where game = (%s) & id > %s; sort id asc; limit 500;' % (
-                    ",".join(dict_game_igdb_ids), most_recent_igc_igdb_id)
-                    igc_response = requests.post(igc_url, headers={'Client-ID': config.client_id_string,
-                                                                 'Authorization': 'Bearer ' + config.access_token},
-                                             data=igc_detailed_query)
-                    igc_response.raise_for_status()
-                    igc_response_json = igc_response.json()
+    def get_involved_game_companies(self, config, game_igc_dict):
+        igc_url = 'https://api.igdb.com/v4/involved_companies'
 
-                    if len(igc_response_json) == 0:
-                        igc_query_finished = True
-                        continue
+        most_recent_igc_igdb_id = 0
+        dict_game_igdb_ids = [str(dict_game.igdb_id) for dict_game in list(
+            game_igc_dict.keys())]  # Get the igdb_ids for each key, i.e. all created and matched games so far this loop
 
-                    new_or_modified_igcs = self.env['igdb.involved.game.company']
-                    for igc in igc_response_json:
-                        matching_igc = self.env['igdb.involved.game.company'].search(
-                            [('igdb_id', '=', igc.get('id'))]) if igc.get('id') else False
-                        igc_game = self.env['igdb.game'].search([('igdb_id', '=', igc.get('game'))], limit=1)
-                        company_id = igc.get('company')
-                        if not matching_igc and igc.get('id'):
-                            new_igc = self.env['igdb.involved.game.company'].create({
-                                'igdb_id': igc.get('id'),
-                                'is_developer': igc.get('developer'),
-                                'is_publisher': igc.get('publisher'),
-                                'is_porter': igc.get('porter'),
-                                'game_id': igc_game.id,
-                            })
-                            new_or_modified_igcs += new_igc
-                            igc_company_dict[new_igc] = company_id
-                            igc_company_dict_inv[company_id].append(new_igc)
-                        elif matching_igc and igc.get('id'):
-                            matching_igc.write({
-                                'is_developer': igc.get('developer'),
-                                'is_publisher': igc.get('publisher'),
-                                'is_porter': igc.get('porter'),
-                                'game_id': igc_game.id,
-                            })
-                            new_or_modified_igcs += matching_igc
-                            igc_company_dict[matching_igc] = company_id
-                            igc_company_dict_inv[company_id].append(matching_igc)
-                    most_recent_igc_igdb_id = new_or_modified_igcs[-1].igdb_id
+        igc_query_finished = False
+        igc_company_dict = {}
+        igc_company_dict_inv = defaultdict(list)
+        while not igc_query_finished:
+            igc_detailed_query = 'fields *; where game = (%s) & id > %s; sort id asc; limit 500;' % (
+                ",".join(dict_game_igdb_ids), most_recent_igc_igdb_id)
+            igc_response = requests.post(igc_url, headers={'Client-ID': config.client_id_string,
+                                                           'Authorization': 'Bearer ' + config.access_token},
+                                         data=igc_detailed_query)
+            igc_response.raise_for_status()
+            igc_response_json = igc_response.json()
 
-                company_url = 'https://api.igdb.com/v4/companies'
+            if len(igc_response_json) == 0:
+                igc_query_finished = True
+                continue
 
-                most_recent_company_igdb_id = 0
-                dict_igc_company_ids = [str(igc_company) for igc_company in set(igc_company_dict.values())]
+            new_or_modified_igcs = self.env['igdb.involved.game.company']
+            for igc in igc_response_json:
+                matching_igc = self.env['igdb.involved.game.company'].search(
+                    [('igdb_id', '=', igc.get('id'))]) if igc.get('id') else False
+                igc_game = self.env['igdb.game'].search([('igdb_id', '=', igc.get('game'))], limit=1)
+                company_id = igc.get('company')
+                if not matching_igc and igc.get('id'):
+                    new_igc = self.env['igdb.involved.game.company'].create({
+                        'igdb_id': igc.get('id'),
+                        'is_developer': igc.get('developer'),
+                        'is_publisher': igc.get('publisher'),
+                        'is_porter': igc.get('porter'),
+                        'game_id': igc_game.id,
+                    })
+                    new_or_modified_igcs += new_igc
+                    igc_company_dict[new_igc] = company_id
+                    igc_company_dict_inv[company_id].append(new_igc)
+                elif matching_igc and igc.get('id'):
+                    matching_igc.write({
+                        'is_developer': igc.get('developer'),
+                        'is_publisher': igc.get('publisher'),
+                        'is_porter': igc.get('porter'),
+                        'game_id': igc_game.id,
+                    })
+                    new_or_modified_igcs += matching_igc
+                    igc_company_dict[matching_igc] = company_id
+                    igc_company_dict_inv[company_id].append(matching_igc)
+            most_recent_igc_igdb_id = new_or_modified_igcs[-1].igdb_id
 
-                company_query_finished = False
-                while not company_query_finished and len(dict_igc_company_ids) > 0:
-                    company_detailed_query = 'fields *; where id = (%s) & id > %s; sort id asc; limit 500;' % (",".join(dict_igc_company_ids), most_recent_company_igdb_id)
-                    company_response = requests.post(company_url, headers={'Client-ID': config.client_id_string,
+        self.get_companies(config, igc_company_dict, igc_company_dict_inv)
+        return
+
+    def get_companies(self, config, igc_company_dict, igc_company_dict_inv):
+        company_url = 'https://api.igdb.com/v4/companies'
+
+        most_recent_company_igdb_id = 0
+        dict_igc_company_ids = [str(igc_company) for igc_company in set(igc_company_dict.values())]
+
+        company_query_finished = False
+        while not company_query_finished and len(dict_igc_company_ids) > 0:
+            company_detailed_query = 'fields *; where id = (%s) & id > %s; sort id asc; limit 500;' % (
+                ",".join(dict_igc_company_ids), most_recent_company_igdb_id)
+            company_response = requests.post(company_url, headers={'Client-ID': config.client_id_string,
                                                                    'Authorization': 'Bearer ' + config.access_token},
-                                                 data=company_detailed_query)
-                    company_response.raise_for_status()
-                    company_response_json = company_response.json()
+                                             data=company_detailed_query)
+            company_response.raise_for_status()
+            company_response_json = company_response.json()
 
-                    if len(company_response_json) == 0:
-                        company_query_finished = True
-                        continue
+            if len(company_response_json) == 0:
+                company_query_finished = True
+                continue
 
-                    new_or_modified_companies = self.env['igdb.game.company']
-                    for company in company_response_json:
-                        matching_company = self.env['igdb.game.company'].search(
-                            [('igdb_id', '=', company.get('id'))]) if company.get('id') else False
-                        country_code = COUNTRY_NUMERIC_CODES.get(str(company.get('country')), '')
-                        country_rec = self.env['res.country'].search([('code', '=', country_code)]) if country_code else self.env['res.country']
-                        if not matching_company and company.get('id'):
-                            new_company = self.env['igdb.game.company'].create({
-                                'igdb_id': company.get('id'),
-                                'url': company.get('url'),
-                                'name': company.get('name'),
-                                'slug': company.get('slug'),
-                                'country_id': country_rec.id,
-                                'involved_game_company_ids': [Command.link(igc_rec.id) for igc_rec in igc_company_dict_inv.get(company.get('id'))],
-                            })  # Todo: eventually sort out changed_game_company_id, parent_company_id, involved_game_company_ids here
-                            new_or_modified_companies += new_company
-                        elif matching_company and company.get('id'):
-                            matching_company.write({
-                                'url': company.get('url'),
-                                'name': company.get('name'),
-                                'slug': company.get('slug'),
-                                'country_id': country_rec.id,
-                                'involved_game_company_ids': [Command.link(igc_rec.id) for igc_rec in igc_company_dict_inv.get(company.get('id'))],
-                            })  # Todo: eventually sort out changed_game_company_id, parent_company_id, involved_game_company_ids here
-                            new_or_modified_companies += matching_company
-                    most_recent_company_igdb_id = new_or_modified_companies[-1].igdb_id
-
-            query.result_game_ids = (created_games + matching_games).sorted(key=lambda mg: (mg['name'],
-                                                                            mg['igdb_id']))
-            query.search_completed = True
-            print("Query %s done!" % query.name)
-
+            new_or_modified_companies = self.env['igdb.game.company']
+            for company in company_response_json:
+                matching_company = self.env['igdb.game.company'].search(
+                    [('igdb_id', '=', company.get('id'))]) if company.get('id') else False
+                country_code = COUNTRY_NUMERIC_CODES.get(str(company.get('country')), '')
+                country_rec = self.env['res.country'].search([('code', '=', country_code)]) if country_code else self.env['res.country']
+                if not matching_company and company.get('id'):
+                    new_company = self.env['igdb.game.company'].create({
+                        'igdb_id': company.get('id'),
+                        'url': company.get('url'),
+                        'name': company.get('name'),
+                        'slug': company.get('slug'),
+                        'country_id': country_rec.id,
+                        'involved_game_company_ids': [Command.link(igc_rec.id) for igc_rec in
+                                                      igc_company_dict_inv.get(company.get('id'))],
+                    })  # Todo: eventually sort out changed_game_company_id, parent_company_id, involved_game_company_ids here
+                    new_or_modified_companies += new_company
+                elif matching_company and company.get('id'):
+                    matching_company.write({
+                        'url': company.get('url'),
+                        'name': company.get('name'),
+                        'slug': company.get('slug'),
+                        'country_id': country_rec.id,
+                        'involved_game_company_ids': [Command.link(igc_rec.id) for igc_rec in
+                                                      igc_company_dict_inv.get(company.get('id'))],
+                    })  # Todo: eventually sort out changed_game_company_id, parent_company_id, involved_game_company_ids here
+                    new_or_modified_companies += matching_company
+            most_recent_company_igdb_id = new_or_modified_companies[-1].igdb_id
         return
 
     def get_result_covers(self):
