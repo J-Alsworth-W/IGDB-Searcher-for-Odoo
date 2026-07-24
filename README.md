@@ -4,21 +4,20 @@ The IGDB Searcher is a module for the Odoo platform that uses IGDB, the Internet
 The IGDB.com website is a great tool for looking up games and information about games, but the site's Advanced Search feature lacks some important features that this module intends to implement. For example, it is not possible on the site to search for games that released on each of Xbox One AND Playstation 4 AND Nintendo Switch – toggling all three options on and searching will instead return all games released on at least one of those systems, instead of on all three. The same is true for other search criteria such as genres and themes. With the IGDB Searcher for Odoo, this functionality has been added which allows searching of IGDB.com with much greater precision.
 
 
-<img width="3838" height="1908" alt="image" src="https://github.com/user-attachments/assets/5b8e60d4-60a2-4190-8188-b3c76854452b" />
+<img width="3838" height="1908" alt="Screenshot 2026-07-24 160317" src="https://github.com/user-attachments/assets/cb1ff34c-6520-4a30-bd6f-bd155a06f338" />
 
 Additionally, the site does not allow you to add consoles/themes/genres to exclude from the search results. For example, it is not possible either on the site to search for games that released on the Xbox 360 and NOT on the Playstation 3 or the Wii. This is another feature present with the IGDB Searcher to allow greater granularity with user searches.
 
 
-<img width="3839" height="1904" alt="image" src="https://github.com/user-attachments/assets/2da9ca1d-3bcc-4bd2-b6d7-6f8e16e53338" />
+<img width="3839" height="1906" alt="Screenshot 2026-07-24 160518" src="https://github.com/user-attachments/assets/ac894cd0-91de-4608-94fb-25dfbd11ea39" />
 
 Queries and their returned results are stored on the system, allowing the user to see previous results in the system. Games returned via queries are also stored on the system, and are relationally-linked to the query/queries they returned as valid results for.
 
+<img width="3837" height="1904" alt="Screenshot 2026-07-24 160808" src="https://github.com/user-attachments/assets/5b32b558-3702-49a1-986a-6ab07c323250" />
 
-<img width="3837" height="826" alt="image" src="https://github.com/user-attachments/assets/bf82b4e2-e3e6-447d-8254-b628ed4dd9f4" />
+<img width="3837" height="1903" alt="Screenshot 2026-07-24 161039" src="https://github.com/user-attachments/assets/e279fabe-ad87-40c5-a346-bd03bd1b22b5" />
 
-<img width="3839" height="1908" alt="image" src="https://github.com/user-attachments/assets/4d645c42-5858-487f-8554-237cb5f80477" />
-
-<img width="3838" height="1022" alt="image" src="https://github.com/user-attachments/assets/e383c5c8-70aa-4023-9164-1be78ece7f42" />
+<img width="3838" height="1904" alt="Screenshot 2026-07-24 162648" src="https://github.com/user-attachments/assets/89b6a455-f2a6-4681-bea9-5065b7d77c41" />
 
 
 # Notes before getting started
