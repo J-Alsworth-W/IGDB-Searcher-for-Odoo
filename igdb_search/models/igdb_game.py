@@ -83,11 +83,14 @@ class IgdbGame(models.Model):
         for game in [game_li for game_li in game_dict if game_dict[game_li] is False]:
             game.game_cover_retrieved = True
 
-    def _cron_get_game_covers(self):
-        games = self.search([('game_cover', '=', False), ('game_cover_retrieved', '=', False)])
-        game_ids = [game.id for game in games]
-        games_batches = [games[i:i + 500] for i in range(0, len(games), 500)]
+    def get_selected_game_covers(self):
+        game_ids = [game.id for game in self]
+        games_batches = [self[i:i + 500] for i in range(0, len(self), 500)]
 
         for batch in games_batches:
             batch.get_cover()
             _logger.info("Game cover %s/%s fetched." % (str(game_ids.index(batch[-1].id) + 1), str(len(game_ids))))
+
+    def _cron_get_game_covers(self):
+        games = self.search([('game_cover', '=', False), ('game_cover_retrieved', '=', False)])
+        games.get_selected_game_covers()

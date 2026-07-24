@@ -395,6 +395,17 @@ class IgdbQuery(models.Model):
 
         return
 
+    def get_result_covers(self):
+        get_all_covers = self.env.context.get('get_all_covers')
+        games = self.env['igdb.game']
+
+        if get_all_covers:
+            games = self.result_game_ids
+        else:
+            games = self.result_game_ids.filtered(lambda game: not game.game_cover and not game.game_cover_retrieved)
+
+        games.get_selected_game_covers()
+
     def copy(self, default=None):
         new_queries = super().copy(default)
         return new_queries

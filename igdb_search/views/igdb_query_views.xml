@@ -73,6 +73,10 @@
                                 </field>
                             </page>
                             <page name="results_kanban" string="Search Results (kanban)">
+                                <group>
+                                    <button string="Get All Covers" class="btn btn-primary" name="get_result_covers" type="object" context="{'get_all_covers': True}"/>
+                                    <button string="Get New Covers" class="btn" name="get_result_covers" type="object" context="{'get_all_covers': False}"/>
+                                </group>
                                 <field name="result_game_ids" readonly="1" options="{'no_create': True}">
                                     <kanban>
                                         <templates>
