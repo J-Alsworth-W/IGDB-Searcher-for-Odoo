@@ -17,3 +17,5 @@ access_igdb_involved_game_company_system,igdb.involved.game.company,model_igdb_i
 access_igdb_involved_game_company,igdb.involved.game.company,model_igdb_involved_game_company,base.group_user,1,1,1,1
 access_igdb_franchise_system,igdb.franchise,model_igdb_franchise,base.group_system,1,1,1,1
 access_igdb_franchise,igdb.franchise,model_igdb_franchise,base.group_user,1,1,1,1
+access_igdb_perspective_system,igdb.perspective,model_igdb_perspective,base.group_system,1,1,1,1
+access_igdb_perspective,igdb.perspective,model_igdb_perspective,base.group_user,1,1,1,1

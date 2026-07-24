@@ -19,6 +19,7 @@ class IgdbGame(models.Model):
     platform_ids = fields.Many2many(string="Platforms", comodel_name='igdb.platform', relation="igdb_game_platforms_rel")
     genre_ids = fields.Many2many(string="Genres", comodel_name='igdb.genre', relation="igdb_game_genres_rel")
     theme_ids = fields.Many2many(string="Themes", comodel_name='igdb.theme', relation="igdb_game_themes_rel")
+    perspective_ids = fields.Many2many(string="Perspectives", comodel_name='igdb.perspective', relation="igdb_game_perspectives_rel")
     url = fields.Char(string="IGDB URL")
     query_ids = fields.Many2many(string="Linked Queries", comodel_name='igdb.query', relation="igdb_query_res_games_rel")
     involved_game_company_ids = fields.One2many(string="Involved Game Companies", comodel_name='igdb.involved.game.company',

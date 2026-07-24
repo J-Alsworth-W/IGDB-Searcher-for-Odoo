@@ -1,7 +1,6 @@
+from odoo import api, exceptions, fields, models, modules, _
 import datetime
 from datetime import timedelta
-
-from odoo import api, exceptions, fields, models, modules, _
 import requests
 import logging
 

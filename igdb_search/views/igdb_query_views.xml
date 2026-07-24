@@ -36,6 +36,7 @@
                                 </div>
                                 <field name="included_genre_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="included_theme_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="included_perspective_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="included_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="included_developer_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="included_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
@@ -48,6 +49,7 @@
                                 </div>
                                 <field name="excluded_genre_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="excluded_theme_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <field name="excluded_perspective_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="excluded_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="excluded_developer_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="excluded_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
@@ -66,6 +68,7 @@
                                         <field name="platform_ids" widget="many2many_tags"/>
                                         <field name="genre_ids" widget="many2many_tags"/>
                                         <field name="theme_ids" widget="many2many_tags"/>
+                                        <field name="perspective_ids" widget="many2many_tags"/>
                                         <field name="developer_ids" widget="many2many_tags" optional="show"/>
                                         <field name="publisher_ids" widget="many2many_tags" optional="show"/>
                                         <field name="franchise_ids" widget="many2many_tags"/>
@@ -120,6 +123,8 @@
                 <field name="excluded_genre_ids" widget="many2many_tags"/>
                 <field name="included_theme_ids" widget="many2many_tags"/>
                 <field name="excluded_theme_ids" widget="many2many_tags"/>
+                <field name="included_perspective_ids" widget="many2many_tags"/>
+                <field name="excluded_perspective_ids" widget="many2many_tags"/>
                 <field name="included_developer_ids" widget="many2many_tags"/>
                 <field name="excluded_developer_ids" widget="many2many_tags"/>
                 <field name="included_publisher_ids" widget="many2many_tags"/>

@@ -41,6 +41,10 @@ class IgdbQuery(models.Model):
                                               relation="igdb_query_inc_franchises_rel")
     excluded_franchise_ids = fields.Many2many(string="Excluded Franchises", comodel_name='igdb.franchise',
                                               relation="igdb_query_exc_franchises_rel")
+    included_perspective_ids = fields.Many2many(string="Included Perspectives", comodel_name='igdb.perspective',
+                                              relation="igdb_query_inc_perspectives_rel")
+    excluded_perspective_ids = fields.Many2many(string="Excluded Perspectives", comodel_name='igdb.perspective',
+                                              relation="igdb_query_exc_perspectives_rel")
     # Todo: add porters or no? Are they useful to know or search?
 
     is_exclusive_platform = fields.Boolean(string="Platforms are Exclusive")
@@ -54,8 +58,6 @@ class IgdbQuery(models.Model):
     num_game_limit = fields.Integer(string="Max. Query Results Limit", default=4000,
                                     help="The upper limit of results that will be returned by the query from IGDB. "
                                          "This cannot exceed 4000 due to technical constraints on the API.")
-    # Todo: can raise limit if do_search() reworked to work like populate_game_companies() with searching by sorted ids.
-    # Todo: Add player perspective as its own model type here.
     # Todo: Add toggle to avoid searching for companies to avoid unneeded compute time?
 
     @api.constrains('release_date_start', 'release_date_end')
@@ -65,16 +67,11 @@ class IgdbQuery(models.Model):
                 raise exceptions.ValidationError("The start date (%s) of the search must be earlier than the end date "
                                                  "(%s)." % (query.release_date_start, query.release_date_end))
 
-    @api.constrains('num_game_limit')
-    def _check_num_game_limit(self):
-        for query in self:
-            if query.num_game_limit > 4000:
-                raise exceptions.ValidationError("The Max. Query Results Limit cannot exceed 4000.")
-
     @api.depends('game_name', 'num_game_limit', 'included_platform_ids', 'excluded_platform_ids', 'included_genre_ids',
                  'excluded_genre_ids', 'included_theme_ids', 'excluded_theme_ids', 'included_developer_ids',
                  'excluded_developer_ids', 'included_publisher_ids', 'excluded_publisher_ids', 'included_franchise_ids',
-                 'excluded_franchise_ids', 'release_date_start', 'release_date_end', 'is_exclusive_platform')
+                 'excluded_franchise_ids', 'included_perspective_ids', 'excluded_perspective_ids', 'release_date_start',
+                 'release_date_end', 'is_exclusive_platform')
     def _compute_concatenated_query(self):
         for query in self:
             where_clause_used = False
@@ -83,7 +80,8 @@ class IgdbQuery(models.Model):
 
             if any(query.game_name or query.included_platform_ids or query.excluded_platform_ids or
                    query.included_genre_ids or query.excluded_genre_ids or query.included_theme_ids or
-                   query.excluded_theme_ids or query.included_franchise_ids or query.excluded_franchise_ids):
+                   query.excluded_theme_ids or query.included_franchise_ids or query.excluded_franchise_ids or
+                   query.included_perspective_ids or query.excluded_perspective_ids):
                 # or query.included_developer_ids or query.excluded_developer_ids or query.included_publisher_ids or query.excluded_publisher_ids):
                 # Todo: check for start and end date here too. Currently missing.
                 concat_query += " where"
@@ -145,6 +143,19 @@ class IgdbQuery(models.Model):
                         concat_query += " &"
                     excluded_franchise_ids = [str(igdb_id) for igdb_id in query.excluded_franchise_ids.mapped('igdb_id')]
                     concat_query += " franchises != (%s)" % (",".join(excluded_franchise_ids))
+                    where_clause_used = True
+
+                if query.included_perspective_ids:
+                    if where_clause_used:
+                        concat_query += " &"
+                    included_perspective_ids = [str(igdb_id) for igdb_id in query.included_perspective_ids.mapped('igdb_id')]
+                    concat_query += " player_perspectives = [%s]" % (",".join(included_perspective_ids))
+                    where_clause_used = True
+                if query.excluded_perspective_ids:
+                    if where_clause_used:
+                        concat_query += " &"
+                    excluded_perspective_ids = [str(igdb_id) for igdb_id in query.excluded_perspective_ids.mapped('igdb_id')]
+                    concat_query += " player_perspectives != (%s)" % (",".join(excluded_perspective_ids))
                     where_clause_used = True
 
                 # Todo: implement searching for specific devs + publishers, not currently working.
@@ -277,6 +288,7 @@ class IgdbQuery(models.Model):
                                 [('igdb_id', '=', game.get('platforms'))]).ids,
                             'genre_ids': self.env['igdb.genre'].search([('igdb_id', '=', game.get('genres'))]).ids,
                             'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
+                            'perspective_ids': self.env['igdb.perspective'].search([('igdb_id', '=', game.get('player_perspectives'))]).ids,
                             'franchise_ids': self.env['igdb.franchise'].search(
                                 [('igdb_id', '=', game.get('franchises'))]).ids,
                         })
@@ -295,6 +307,8 @@ class IgdbQuery(models.Model):
                                 [('igdb_id', '=', game.get('platforms'))]).ids,
                             'genre_ids': self.env['igdb.genre'].search([('igdb_id', '=', game.get('genres'))]).ids,
                             'theme_ids': self.env['igdb.theme'].search([('igdb_id', '=', game.get('themes'))]).ids,
+                            'perspective_ids': self.env['igdb.perspective'].search(
+                                [('igdb_id', '=', game.get('player_perspectives'))]).ids,
                             'franchise_ids': self.env['igdb.franchise'].search(
                                 [('igdb_id', '=', game.get('franchises'))]).ids,
                         })
