@@ -22,15 +22,13 @@
                             <field name="where_clause_used" invisible="1"/>
                             <field name="game_name"/>
                             <field name="num_game_limit"/>
-                        </group>
-                        <group string="Release Date">
                             <field name="release_date_start"/>
                             <field name="release_date_end"/>
                         </group>
                         <group string="Inclusive and Exclusive Filters">
                             <group style="border-right: 1px solid lightgrey;">
                                 <label for="included_platform_ids"/>
-                                <div class="d-inline-flex">
+                                <div class="d-inline-flex" style="width:100%;">
                                     <field name="included_platform_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                     <field name="is_exclusive_platform" nolabel="1"/>
                                 </div>
@@ -54,9 +52,6 @@
                                 <field name="excluded_developer_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="excluded_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
                             </group>
-                        </group>
-                        <group>
-
                         </group>
                         <notebook>
                             <page name="results_list" string="Search Results (list)">

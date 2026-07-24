@@ -16,37 +16,52 @@
                 </header>
                 <sheet class="o_igdb_form_sheet_bg">
                     <group>
-                        <field name="name"/>
-                        <field name="igdb_id"/>
-                        <field name="game_cover" widget="image" invisible="0"/>
-                        <field name="first_release_date"/>
-                        <field name="url" widget="url"/>
-                        <field name="platform_ids" options="{'no_create': True}" widget="many2many_tags"/>
-                        <field name="genre_ids" options="{'no_create': True}" widget="many2many_tags"/>
-                        <field name="theme_ids" options="{'no_create': True}" widget="many2many_tags"/>
-                        <field name="franchise_ids" options="{'no_create': True}" widget="many2many_tags"/>
-                        <separator/>
-                        <field name="query_ids" options="{'no_create': True}">
-                            <list>
-                                <field name="name"/>
-                                <field name="concatenated_query"/>
-                                <field name="game_name"/>
-                                <field name="included_platform_ids" widget="many2many_tags"/>
-                                <field name="excluded_platform_ids" widget="many2many_tags"/>
-                            </list>
-                        </field>
-                        <notebook>
-                            <page name="developers" string="Developers">
-                                <field name="developer_ids"/>
-                            </page>
-                            <page name="publishers" string="Publishers">
-                                <field name="publisher_ids"/>
-                            </page>
-                            <page name="porters" string="Porters">
-                                <field name="porter_ids"/>
-                            </page>
-                        </notebook>
+                        <group>
+                            <field name="name"/>
+                            <field name="igdb_id"/>
+                            <field name="first_release_date"/>
+                            <field name="url" widget="url"/>
+                            <field name="platform_ids" options="{'no_create': True}" widget="many2many_tags"/>
+                            <field name="genre_ids" options="{'no_create': True}" widget="many2many_tags"/>
+                            <field name="theme_ids" options="{'no_create': True}" widget="many2many_tags"/>
+                            <field name="perspective_ids" options="{'no_create': True}" widget="many2many_tags"/>
+                            <field name="franchise_ids" options="{'no_create': True}" widget="many2many_tags"/>
+                            <separator/>
+                        </group>
+                        <group>
+                            <field name="game_cover" widget="image" invisible="0"/>
+                        </group>
+                        <group colspan="12">
+                            <field name="query_ids" options="{'no_create': True}">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="concatenated_query"/>
+                                    <field name="game_name"/>
+                                    <field name="included_platform_ids" widget="many2many_tags"/>
+                                    <field name="excluded_platform_ids" widget="many2many_tags"/>
+                                    <field name="included_genre_ids" widget="many2many_tags"/>
+                                    <field name="excluded_genre_ids" widget="many2many_tags"/>
+                                    <field name="included_theme_ids" widget="many2many_tags"/>
+                                    <field name="excluded_theme_ids" widget="many2many_tags"/>
+                                    <field name="included_perspective_ids" widget="many2many_tags"/>
+                                    <field name="excluded_perspective_ids" widget="many2many_tags"/>
+                                    <field name="included_franchise_ids" widget="many2many_tags"/>
+                                    <field name="excluded_franchise_ids" widget="many2many_tags"/>
+                                </list>
+                            </field>
+                        </group>
                     </group>
+                    <notebook>
+                        <page name="developers" string="Developers">
+                            <field name="developer_ids"/>
+                        </page>
+                        <page name="publishers" string="Publishers">
+                            <field name="publisher_ids"/>
+                        </page>
+                        <page name="porters" string="Porters">
+                            <field name="porter_ids"/>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
@@ -65,6 +80,7 @@
                 <field name="platform_ids" widget="many2many_tags"/>
                 <field name="genre_ids" widget="many2many_tags"/>
                 <field name="theme_ids" widget="many2many_tags"/>
+                <field name="perspective_ids" widget="many2many_tags"/>
                 <field name="developer_ids" widget="many2many_tags" optional="show"/>
                 <field name="publisher_ids" widget="many2many_tags" optional="show"/>
                 <field name="franchise_ids" widget="many2many_tags"/>
