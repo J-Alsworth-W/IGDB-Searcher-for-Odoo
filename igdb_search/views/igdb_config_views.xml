@@ -20,6 +20,7 @@
                         <field name="client_secret"/>
                         <field name="auth_token_url"/>
                         <field name="access_token"/>
+                        <field name="expiry_time"/>
                     </group>
                 </sheet>
             </form>
