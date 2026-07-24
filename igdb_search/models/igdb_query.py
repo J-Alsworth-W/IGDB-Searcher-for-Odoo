@@ -42,7 +42,8 @@ class IgdbQuery(models.Model):
     excluded_franchise_ids = fields.Many2many(string="Excluded Franchises", comodel_name='igdb.franchise',
                                               relation="igdb_query_exc_franchises_rel")
     # Todo: add porters or no? Are they useful to know or search?
-    # Todo: add bool fields to make platform/genre searches exclusive (i.e., just one platform/genre)
+
+    is_exclusive_platform = fields.Boolean(string="Platforms are Exclusive")
 
     result_game_ids = fields.Many2many(string="Returned Games", comodel_name='igdb.game',
                                        relation="igdb_query_res_games_rel", copy=False)
@@ -73,7 +74,7 @@ class IgdbQuery(models.Model):
     @api.depends('game_name', 'num_game_limit', 'included_platform_ids', 'excluded_platform_ids', 'included_genre_ids',
                  'excluded_genre_ids', 'included_theme_ids', 'excluded_theme_ids', 'included_developer_ids',
                  'excluded_developer_ids', 'included_publisher_ids', 'excluded_publisher_ids', 'included_franchise_ids',
-                 'excluded_franchise_ids', 'release_date_start', 'release_date_end')
+                 'excluded_franchise_ids', 'release_date_start', 'release_date_end', 'is_exclusive_platform')
     def _compute_concatenated_query(self):
         for query in self:
             where_clause_used = False
@@ -88,12 +89,13 @@ class IgdbQuery(models.Model):
                 # or query.included_developer_ids or query.excluded_developer_ids or query.included_publisher_ids or query.excluded_publisher_ids):
                 # Todo: check for start and end date here too. Currently missing.
                 concat_query += " where"
+                platform_search_mode = ["{", "}"] if query.is_exclusive_platform else ["[", "]"]
 
                 if query.included_platform_ids:
                     included_platform_ids = [str(igdb_id) for igdb_id in query.included_platform_ids.mapped('igdb_id')]
-                    concat_query += " platforms = [%s]" % (",".join(included_platform_ids))
+                    concat_query += f" platforms = {platform_search_mode[0]}{",".join(included_platform_ids)}{platform_search_mode[1]}"
                     where_clause_used = True
-                if query.excluded_platform_ids:
+                if query.excluded_platform_ids and not query.is_exclusive_platform:
                     if where_clause_used:
                         concat_query += " &"
                     excluded_platform_ids = [str(igdb_id) for igdb_id in query.excluded_platform_ids.mapped('igdb_id')]

@@ -28,8 +28,12 @@
                             <field name="release_date_end"/>
                         </group>
                         <group string="Inclusive and Exclusive Filters">
-                            <group>
-                                <field name="included_platform_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                            <group style="border-right: 1px solid lightgrey;">
+                                <label for="included_platform_ids"/>
+                                <div class="d-inline-flex">
+                                    <field name="included_platform_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                    <field name="is_exclusive_platform" nolabel="1"/>
+                                </div>
                                 <field name="included_genre_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="included_theme_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="included_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
@@ -37,7 +41,11 @@
                                 <field name="included_publisher_ids" widget="many2many_tags" options="{'no_create': True}"/>
                             </group>
                             <group>
-                                <field name="excluded_platform_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                                <label for="excluded_platform_ids"/>
+                                <div>
+                                    <field name="excluded_platform_ids" widget="many2many_tags" options="{'no_create': True}" readonly="is_exclusive_platform" invisible="is_exclusive_platform"/>
+                                    <field name="excluded_platform_ids" widget="many2many_tags" options="{'no_create': True}" readonly="is_exclusive_platform" invisible="not is_exclusive_platform" style="visibility:hidden;"/>
+                                </div>
                                 <field name="excluded_genre_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="excluded_theme_ids" widget="many2many_tags" options="{'no_create': True}"/>
                                 <field name="excluded_franchise_ids" widget="many2many_tags" options="{'no_create': True}"/>
@@ -75,6 +83,7 @@
                                                 <main class="ms-2">
                                                     <field name="name"/>
                                                     <field name="platform_ids" widget="many2many_tags"/>
+                                                    <hr class="my-0"/>
                                                     <field name="developer_ids" widget="many2many_tags"/>
                                                 </main>
                                             </t>
