@@ -80,18 +80,24 @@ class IgdbQuery(models.Model):
             where_clause_used = False
 
             concat_query = "fields *;"
-            if query.game_name:
-                concat_query += ' search "%s";' % query.game_name
 
-            if any(query.included_platform_ids or query.excluded_platform_ids or query.included_genre_ids or
-                   query.excluded_genre_ids or query.included_theme_ids or query.excluded_theme_ids or
-                   query.included_franchise_ids or query.excluded_franchise_ids):
+            if any(query.game_name or query.included_platform_ids or query.excluded_platform_ids or
+                   query.included_genre_ids or query.excluded_genre_ids or query.included_theme_ids or
+                   query.excluded_theme_ids or query.included_franchise_ids or query.excluded_franchise_ids):
                 # or query.included_developer_ids or query.excluded_developer_ids or query.included_publisher_ids or query.excluded_publisher_ids):
                 # Todo: check for start and end date here too. Currently missing.
                 concat_query += " where"
-                platform_search_mode = ["{", "}"] if query.is_exclusive_platform else ["[", "]"]
 
+                if query.game_name:
+                    if where_clause_used:
+                        concat_query += " &"
+                    concat_query += f' name ~ *"{query.game_name}"*'
+                    where_clause_used = True
+
+                platform_search_mode = ["{", "}"] if query.is_exclusive_platform else ["[", "]"]
                 if query.included_platform_ids:
+                    if where_clause_used:
+                        concat_query += " &"
                     included_platform_ids = [str(igdb_id) for igdb_id in query.included_platform_ids.mapped('igdb_id')]
                     concat_query += f" platforms = {platform_search_mode[0]}{",".join(included_platform_ids)}{platform_search_mode[1]}"
                     where_clause_used = True
@@ -218,10 +224,8 @@ class IgdbQuery(models.Model):
                 # If 2nd+ iteration of while loop
                 if retrieved_igdb_ids_str:
                     where_clause_str = " &" if query.where_clause_used else " where"
-                    game_reference = "id" if query.game_name else "id"
 
-                    new_ids_search_str = ";" if query.game_name else ""
-                    new_ids_search_str += where_clause_str + " %s > %s; sort id asc; limit" % (game_reference, most_recent_game_id)
+                    new_ids_search_str = where_clause_str + " id > %s; sort id asc; limit" % most_recent_game_id
 
                     detailed_query = re.sub(igdb_replacement_regex, new_ids_search_str,
                                             detailed_query)
@@ -345,7 +349,7 @@ class IgdbQuery(models.Model):
                 dict_igc_company_ids = [str(igc_company) for igc_company in set(igc_company_dict.values())]
 
                 company_query_finished = False
-                while not company_query_finished:
+                while not company_query_finished and len(dict_igc_company_ids) > 0:
                     company_detailed_query = 'fields *; where id = (%s) & id > %s; sort id asc; limit 500;' % (",".join(dict_igc_company_ids), most_recent_company_igdb_id)
                     company_response = requests.post(company_url, headers={'Client-ID': config.client_id_string,
                                                                    'Authorization': 'Bearer ' + config.access_token},
