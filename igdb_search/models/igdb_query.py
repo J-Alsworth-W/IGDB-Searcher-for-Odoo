@@ -84,8 +84,9 @@ class IgdbQuery(models.Model):
             if any(query.game_name or query.included_platform_ids or query.excluded_platform_ids or
                    query.included_genre_ids or query.excluded_genre_ids or query.included_theme_ids or
                    query.excluded_theme_ids or query.included_franchise_ids or query.excluded_franchise_ids or
-                   query.included_perspective_ids or query.excluded_perspective_ids):
-                # or query.included_developer_ids or query.excluded_developer_ids or query.included_publisher_ids or query.excluded_publisher_ids):
+                   query.included_perspective_ids or query.excluded_perspective_ids or
+                   query.included_developer_ids or query.excluded_developer_ids or
+                   query.included_publisher_ids or query.excluded_publisher_ids):
                 # Todo: check for start and end date here too. Currently missing.
                 concat_query += " where"
 
@@ -161,25 +162,118 @@ class IgdbQuery(models.Model):
                     concat_query += " player_perspectives != (%s)" % (",".join(excluded_perspective_ids))
                     where_clause_used = True
 
-                # Todo: implement searching for specific devs + publishers, not currently working.
-                # Below is commented out due to searching the API with "involved_companies.company" not being valid.
-                # Will have to be done by filtering the results post-retrieval.
+                if (query.included_developer_ids or query.included_publisher_ids or
+                        query.excluded_developer_ids or query.excluded_publisher_ids):
+                    if where_clause_used:
+                        concat_query += " &"
 
-                # if query.included_developer_ids or query.included_publisher_ids:
-                #     if where_clause_used:
-                #         concat_query += " &"
-                #     included_company_ids = [str(igdb_id) for igdb_id in query.included_developer_ids.mapped('igdb_id')
-                #                             + query.included_publisher_ids.mapped('igdb_id')]
-                #     concat_query += " involved_companies.company = [%s]" % (",".join(included_company_ids))
-                #     where_clause_used = True
-                #
-                # if query.excluded_developer_ids or query.excluded_publisher_ids:
-                #     if where_clause_used:
-                #         concat_query += " &"
-                #     excluded_company_ids = [str(igdb_id) for igdb_id in query.excluded_developer_ids.mapped('igdb_id')
-                #                             + query.excluded_publisher_ids.mapped('igdb_id')]
-                #     concat_query += " involved_companies.company != (%s)" % (",".join(excluded_company_ids))
-                #     where_clause_used = True
+                    developer_ids = [str(igdb_id) for igdb_id in query.included_developer_ids.mapped('igdb_id')
+                                     + query.excluded_developer_ids.mapped('igdb_id')]
+                    publisher_ids = [str(igdb_id) for igdb_id in query.included_publisher_ids.mapped('igdb_id')
+                                     + query.excluded_publisher_ids.mapped('igdb_id')]
+
+                    config = self.env['igdb.config'].get_config()
+                    config.test_connection()
+                    igc_url = 'https://api.igdb.com/v4/involved_companies'
+                    igc_query_finished = False
+                    most_recent_igc_igdb_id = 0
+                    igc_company_dict = {}
+                    igc_company_dict_inv = defaultdict(list)
+                    included_games_igc_mapping = {}
+                    excluded_games_igc_list = []
+                    new_or_modified_igcs = self.env['igdb.involved.game.company']
+
+                    while not igc_query_finished:
+                        igc_detailed_query = 'fields *; where ((company = (%s) & developer = true) | (company = (%s) & publisher = true)) & id > %s; sort id asc; limit 500;' % (
+                            ",".join(developer_ids), ",".join(publisher_ids), most_recent_igc_igdb_id)
+                        igc_response = requests.post(igc_url, headers={'Client-ID': config.client_id_string,
+                                                                       'Authorization': 'Bearer ' + config.access_token},
+                                                     data=igc_detailed_query)
+                        igc_response.raise_for_status()
+                        igc_response_json = igc_response.json()
+
+                        if len(igc_response_json) == 0:
+                            igc_query_finished = True
+                            continue
+
+                        for igc in igc_response_json:
+                            matching_igc = self.env['igdb.involved.game.company'].search(
+                                [('igdb_id', '=', igc.get('id'))]) if igc.get('id') else False
+                            igc_game = self.env['igdb.game'].search([('igdb_id', '=', igc.get('game'))], limit=1)
+                            if not igc_game:
+                                test_var = 'test'  # Todo: this can really trigger, not all IGCs will have games in-system already. Resolve, or leave as-is?
+                            company_id = igc.get('company')
+                            if not matching_igc and igc.get('id'):
+                                new_igc = self.env['igdb.involved.game.company'].create({
+                                    'igdb_id': igc.get('id'),
+                                    'is_developer': igc.get('developer'),
+                                    'is_publisher': igc.get('publisher'),
+                                    'is_porter': igc.get('porter'),
+                                    'game_id': igc_game.id,
+                                })
+                                new_or_modified_igcs += new_igc
+                                igc_company_dict[new_igc] = company_id
+                                igc_company_dict_inv[company_id].append(new_igc)
+
+                                if igc['developer'] is True and igc['company'] in query.mapped('included_developer_ids.igdb_id'):
+                                    if included_games_igc_mapping.get(igc['game']) and included_games_igc_mapping[igc['game']].get('devs') is not None:
+                                        included_games_igc_mapping[igc['game']]['devs'].append(new_igc)
+                                    else:
+                                        included_games_igc_mapping[igc['game']] = {'devs': [new_igc], 'pubs': []}
+                                if igc['publisher'] is True and igc['company'] in query.mapped('included_publisher_ids.igdb_id'):
+                                    if included_games_igc_mapping.get(igc['game']) and included_games_igc_mapping[igc['game']].get('pubs') is not None:
+                                        included_games_igc_mapping[igc['game']]['pubs'].append(new_igc)
+                                    else:
+                                        included_games_igc_mapping[igc['game']] = {'devs': [], 'pubs': [new_igc]}
+                                if igc['developer'] is True and igc['company'] in query.mapped('excluded_developer_ids.igdb_id'):
+                                    excluded_games_igc_list.append(new_igc)
+                                if igc['publisher'] is True and igc['company'] in query.mapped('excluded_publisher_ids.igdb_id'):
+                                    excluded_games_igc_list.append(new_igc)
+
+                            elif matching_igc and igc.get('id'):
+                                matching_igc.write({
+                                    'is_developer': igc.get('developer'),
+                                    'is_publisher': igc.get('publisher'),
+                                    'is_porter': igc.get('porter'),
+                                    'game_id': igc_game.id,
+                                })
+                                new_or_modified_igcs += matching_igc
+                                igc_company_dict[matching_igc] = company_id
+                                igc_company_dict_inv[company_id].append(matching_igc)
+
+                                if igc['developer'] is True and igc['company'] in query.mapped('included_developer_ids.igdb_id'):
+                                    if included_games_igc_mapping.get(igc['game']) and included_games_igc_mapping[igc['game']].get('devs') is not None:
+                                        included_games_igc_mapping[igc['game']]['devs'].append(matching_igc)
+                                    else:
+                                        included_games_igc_mapping[igc['game']] = {'devs': [matching_igc], 'pubs': []}
+                                if igc['publisher'] is True and igc['company'] in query.mapped('included_publisher_ids.igdb_id'):
+                                    if included_games_igc_mapping.get(igc['game']) and included_games_igc_mapping[igc['game']].get('pubs') is not None:
+                                        included_games_igc_mapping[igc['game']]['pubs'].append(matching_igc)
+                                    else:
+                                        included_games_igc_mapping[igc['game']] = {'devs': [], 'pubs': [matching_igc]}
+                                if igc['developer'] is True and igc['company'] in query.mapped('excluded_developer_ids.igdb_id'):
+                                    excluded_games_igc_list.append(matching_igc)
+                                if igc['publisher'] is True and igc['company'] in query.mapped('excluded_publisher_ids.igdb_id'):
+                                    excluded_games_igc_list.append(matching_igc)
+
+                        most_recent_igc_igdb_id = new_or_modified_igcs[-1].igdb_id
+
+                    all_matching_developer_igcs_buckets = {
+                        k: v for k,v in included_games_igc_mapping.items()
+                        if v.get('devs') and all(
+                            inc_dev.game_company_id.igdb_id in query.mapped('included_developer_ids.igdb_id') for inc_dev in v.get('devs'))
+                           and
+                           v.get('pubs') and all(
+                            inc_pub.game_company_id.igdb_id in query.mapped('included_publisher_ids.igdb_id') for inc_pub in v.get('pubs'))}
+
+                    all_matching_developer_igcs = [x for xs in [
+                        igc_rec[1]['devs'] for igc_rec in all_matching_developer_igcs_buckets.items()] + [
+                        igc_rec[1]['pubs'] for igc_rec in all_matching_developer_igcs_buckets.items()]
+                                                   for x in xs]
+
+                    all_matching_developer_igcs_strings = [str(igc_id.igdb_id) for igc_id in all_matching_developer_igcs]
+                    concat_query += " involved_companies = (%s)" % (",".join(all_matching_developer_igcs_strings))
+                    where_clause_used = True
 
                 if query.release_date_start:
                     if where_clause_used:
