@@ -1,5 +1,8 @@
 from odoo import api, exceptions, fields, models, modules, _
 import requests
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class IgdbFranchise(models.Model):
@@ -64,4 +67,4 @@ class IgdbFranchise(models.Model):
                         new_and_matched_franchises += matching_franchise
 
                 most_recent_franchise_igdb_id = new_and_matched_franchises[-1].igdb_id
-                print("%s franchise records searched and created/updated." % str(len(new_and_matched_franchises)))
+                _logger.info("%s franchise records searched and created/updated." % str(len(new_and_matched_franchises)))

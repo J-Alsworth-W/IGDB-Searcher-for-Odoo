@@ -7,6 +7,9 @@ from datetime import date, datetime
 from collections import defaultdict
 import base64
 from PIL import Image
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class IgdbQuery(models.Model):
@@ -328,7 +331,7 @@ class IgdbQuery(models.Model):
         self.result_game_ids = (created_games + matching_games).sorted(key=lambda mg: (mg['name'],
                                                                                         mg['igdb_id']))
         self.search_completed = True
-        print("Query %s done!" % self.name)
+        _logger.info("Query %s done!" % self.name)
         return
 
     def get_involved_game_companies(self, config, game_igc_dict):

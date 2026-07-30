@@ -1,6 +1,9 @@
 from odoo import api, exceptions, fields, models, modules, _
 from odoo.addons.igdb_search.const import COUNTRY_NUMERIC_CODES
 import requests
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class IgdbCompany(models.Model):
@@ -95,4 +98,4 @@ class IgdbCompany(models.Model):
                     new_and_matched_companies += matching_company
 
             most_recent_company_igdb_id = new_and_matched_companies[-1].igdb_id
-            print("%s company records searched and created/updated." % str(len(new_and_matched_companies)))
+            _logger.info("%s company records searched and created/updated." % str(len(new_and_matched_companies)))

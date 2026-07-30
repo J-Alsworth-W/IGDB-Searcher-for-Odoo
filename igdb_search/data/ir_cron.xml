@@ -11,5 +11,71 @@
             <field name="interval_number">1</field>
             <field name="interval_type">hours</field>
         </record>
+
+        <record id="game_companies_cron" model="ir.cron">
+            <field name="name">IGDB Games: Populate Companies</field>
+            <field name="model_id" ref="igdb_search.model_igdb_game_company"/>
+            <field name="state">code</field>
+            <field name="code">model.populate_game_companies()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+        </record>
+
+        <record id="genre_cron" model="ir.cron">
+            <field name="name">IGDB Games: Populate Genres</field>
+            <field name="model_id" ref="igdb_search.model_igdb_genre"/>
+            <field name="state">code</field>
+            <field name="code">model.populate_genres()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+        </record>
+
+        <record id="theme_cron" model="ir.cron">
+            <field name="name">IGDB Games: Populate Themes</field>
+            <field name="model_id" ref="igdb_search.model_igdb_theme"/>
+            <field name="state">code</field>
+            <field name="code">model.populate_themes()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+        </record>
+
+        <record id="platform_cron" model="ir.cron">
+            <field name="name">IGDB Games: Populate Platforms</field>
+            <field name="model_id" ref="igdb_search.model_igdb_platform"/>
+            <field name="state">code</field>
+            <field name="code">model.populate_platforms()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+        </record>
+
+        <record id="perspective_cron" model="ir.cron">
+            <field name="name">IGDB Games: Populate Perspectives</field>
+            <field name="model_id" ref="igdb_search.model_igdb_perspective"/>
+            <field name="state">code</field>
+            <field name="code">model.populate_perspectives()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+        </record>
+
+        <record id="franchise_cron" model="ir.cron">
+            <field name="name">IGDB Games: Populate Franchises</field>
+            <field name="model_id" ref="igdb_search.model_igdb_franchise"/>
+            <field name="state">code</field>
+            <field name="code">model.populate_franchises()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+        </record>
     </data>
 </odoo>
