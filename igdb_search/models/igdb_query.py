@@ -177,15 +177,25 @@ class IgdbQuery(models.Model):
                     igc_url = 'https://api.igdb.com/v4/involved_companies'
                     igc_query_finished = False
                     most_recent_igc_igdb_id = 0
-                    igc_company_dict = {}
-                    igc_company_dict_inv = defaultdict(list)
                     included_games_igc_mapping = {}
-                    excluded_games_igc_list = []
+                    excluded_games_igc_dict = {}
                     new_or_modified_igcs = self.env['igdb.involved.game.company']
 
+                    is_developers = True if developer_ids else False
+                    is_publishers = True if publisher_ids else False
+                    igc_company_clause = ''
+
+                    if is_developers and is_publishers:
+                        igc_company_clause = '((company = (%s) & developer = true) | (company = (%s) & publisher = true))' % (",".join(developer_ids), ",".join(publisher_ids))
+                    elif is_developers and not is_publishers:
+                        igc_company_clause = '((company = (%s) & developer = true))' % ",".join(developer_ids)
+                    elif not is_developers and is_publishers:
+                        igc_company_clause = '((company = (%s) & publisher = true))' % ",".join(publisher_ids)
+                    # No need for an else clause here, should logically never happen due to parent if-statement.
+
                     while not igc_query_finished:
-                        igc_detailed_query = 'fields *; where ((company = (%s) & developer = true) | (company = (%s) & publisher = true)) & id > %s; sort id asc; limit 500;' % (
-                            ",".join(developer_ids), ",".join(publisher_ids), most_recent_igc_igdb_id)
+                        igc_detailed_query = 'fields *; where %s & id > %s; sort id asc; limit 500;' % (
+                            igc_company_clause, most_recent_igc_igdb_id)
                         igc_response = requests.post(igc_url, headers={'Client-ID': config.client_id_string,
                                                                        'Authorization': 'Bearer ' + config.access_token},
                                                      data=igc_detailed_query)
@@ -202,7 +212,7 @@ class IgdbQuery(models.Model):
                             igc_game = self.env['igdb.game'].search([('igdb_id', '=', igc.get('game'))], limit=1)
                             if not igc_game:
                                 test_var = 'test'  # Todo: this can really trigger, not all IGCs will have games in-system already. Resolve, or leave as-is?
-                            company_id = igc.get('company')
+
                             if not matching_igc and igc.get('id'):
                                 new_igc = self.env['igdb.involved.game.company'].create({
                                     'igdb_id': igc.get('id'),
@@ -212,23 +222,21 @@ class IgdbQuery(models.Model):
                                     'game_id': igc_game.id,
                                 })
                                 new_or_modified_igcs += new_igc
-                                igc_company_dict[new_igc] = company_id
-                                igc_company_dict_inv[company_id].append(new_igc)
 
                                 if igc['developer'] is True and igc['company'] in query.mapped('included_developer_ids.igdb_id'):
                                     if included_games_igc_mapping.get(igc['game']) and included_games_igc_mapping[igc['game']].get('devs') is not None:
-                                        included_games_igc_mapping[igc['game']]['devs'].append(new_igc)
+                                        included_games_igc_mapping[igc['game']]['devs'].append(igc)
                                     else:
-                                        included_games_igc_mapping[igc['game']] = {'devs': [new_igc], 'pubs': []}
+                                        included_games_igc_mapping[igc['game']] = {'devs': [igc], 'pubs': []}
                                 if igc['publisher'] is True and igc['company'] in query.mapped('included_publisher_ids.igdb_id'):
                                     if included_games_igc_mapping.get(igc['game']) and included_games_igc_mapping[igc['game']].get('pubs') is not None:
-                                        included_games_igc_mapping[igc['game']]['pubs'].append(new_igc)
+                                        included_games_igc_mapping[igc['game']]['pubs'].append(igc)
                                     else:
-                                        included_games_igc_mapping[igc['game']] = {'devs': [], 'pubs': [new_igc]}
+                                        included_games_igc_mapping[igc['game']] = {'devs': [], 'pubs': [igc]}
                                 if igc['developer'] is True and igc['company'] in query.mapped('excluded_developer_ids.igdb_id'):
-                                    excluded_games_igc_list.append(new_igc)
+                                    excluded_games_igc_dict[igc['game']] =  True
                                 if igc['publisher'] is True and igc['company'] in query.mapped('excluded_publisher_ids.igdb_id'):
-                                    excluded_games_igc_list.append(new_igc)
+                                    excluded_games_igc_dict[igc['game']] = True
 
                             elif matching_igc and igc.get('id'):
                                 matching_igc.write({
@@ -238,42 +246,41 @@ class IgdbQuery(models.Model):
                                     'game_id': igc_game.id,
                                 })
                                 new_or_modified_igcs += matching_igc
-                                igc_company_dict[matching_igc] = company_id
-                                igc_company_dict_inv[company_id].append(matching_igc)
 
                                 if igc['developer'] is True and igc['company'] in query.mapped('included_developer_ids.igdb_id'):
                                     if included_games_igc_mapping.get(igc['game']) and included_games_igc_mapping[igc['game']].get('devs') is not None:
-                                        included_games_igc_mapping[igc['game']]['devs'].append(matching_igc)
+                                        included_games_igc_mapping[igc['game']]['devs'].append(igc)
                                     else:
-                                        included_games_igc_mapping[igc['game']] = {'devs': [matching_igc], 'pubs': []}
+                                        included_games_igc_mapping[igc['game']] = {'devs': [igc], 'pubs': []}
                                 if igc['publisher'] is True and igc['company'] in query.mapped('included_publisher_ids.igdb_id'):
                                     if included_games_igc_mapping.get(igc['game']) and included_games_igc_mapping[igc['game']].get('pubs') is not None:
-                                        included_games_igc_mapping[igc['game']]['pubs'].append(matching_igc)
+                                        included_games_igc_mapping[igc['game']]['pubs'].append(igc)
                                     else:
-                                        included_games_igc_mapping[igc['game']] = {'devs': [], 'pubs': [matching_igc]}
+                                        included_games_igc_mapping[igc['game']] = {'devs': [], 'pubs': [igc]}
                                 if igc['developer'] is True and igc['company'] in query.mapped('excluded_developer_ids.igdb_id'):
-                                    excluded_games_igc_list.append(matching_igc)
+                                    excluded_games_igc_dict[igc['game']] =  True
                                 if igc['publisher'] is True and igc['company'] in query.mapped('excluded_publisher_ids.igdb_id'):
-                                    excluded_games_igc_list.append(matching_igc)
+                                    excluded_games_igc_dict[igc['game']] =  True
 
                         most_recent_igc_igdb_id = new_or_modified_igcs[-1].igdb_id
 
-                    all_matching_developer_igcs_buckets = {
-                        k: v for k,v in included_games_igc_mapping.items()
-                        if v.get('devs') and all(
-                            inc_dev.game_company_id.igdb_id in query.mapped('included_developer_ids.igdb_id') for inc_dev in v.get('devs'))
+                    all_matching_igcs_buckets = {
+                        k: v for k, v in included_games_igc_mapping.items()
+                        if all(
+                            inc_dev in [li['company'] for li in v.get('devs')] for
+                            inc_dev in query.mapped('included_developer_ids.igdb_id'))
                            and
-                           v.get('pubs') and all(
-                            inc_pub.game_company_id.igdb_id in query.mapped('included_publisher_ids.igdb_id') for inc_pub in v.get('pubs'))}
+                           all(
+                               inc_pub in [li['company'] for li in v.get('pubs')] for
+                               inc_pub in query.mapped('included_publisher_ids.igdb_id'))
+                           and
+                           not k in excluded_games_igc_dict}
 
-                    all_matching_developer_igcs = [x for xs in [
-                        igc_rec[1]['devs'] for igc_rec in all_matching_developer_igcs_buckets.items()] + [
-                        igc_rec[1]['pubs'] for igc_rec in all_matching_developer_igcs_buckets.items()]
-                                                   for x in xs]
-
-                    all_matching_developer_igcs_strings = [str(igc_id.igdb_id) for igc_id in all_matching_developer_igcs]
-                    concat_query += " involved_companies = (%s)" % (",".join(all_matching_developer_igcs_strings))
+                    all_matching_games = [igc_rec for igc_rec in all_matching_igcs_buckets]
+                    all_matching_games_strings = [str(game_igdb_id) for game_igdb_id in all_matching_games]
+                    concat_query += " id = (%s)" % (",".join(all_matching_games_strings))
                     where_clause_used = True
+                    # Todo: do_search may bug out if this id clause returns "()", test and check.
 
                 if query.release_date_start:
                     if where_clause_used:
@@ -311,7 +318,7 @@ class IgdbQuery(models.Model):
 
         retrieved_igdb_ids = []
         retrieved_igdb_ids_str = ""
-        igdb_replacement_regex = r"((where id.*)|(& id.*))*(; sort id asc; limit)"
+        igdb_replacement_regex = r"((where id >.*)|(& id >.*))*(; sort id asc; limit)"
         limit_replacement_regex = r"limit \d*"
 
         created_games = self.env['igdb.game']
